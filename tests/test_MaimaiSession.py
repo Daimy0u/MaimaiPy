@@ -19,7 +19,7 @@ class TestMaiMaiSession:
     def test_default_session(self):
         assert self.maimai.session is not None
         assert self.maimai.headers is not None
-        assert self.maimai.ssid is ""
+        assert self.maimai.ssid == ""
 
     def test__parse_ssid_good(self):
         assert (
