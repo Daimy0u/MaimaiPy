@@ -44,13 +44,13 @@ class Record(Score):
         self.chart = chart
         self.score = score
     
-    def getRating(self) -> int:
-        return self.score.percent * self.score.factor * self.chart.difficulty.constant
+    def getRating(self, diffLabel:str) -> int:
+        return self.score.percent * self.score.factor * self.chart.difficulties[diffLabel]["constant"]
     
-    def getPossibleRating(self) -> List[GradeRatingTuple]:
+    def getPossibleRating(self,diffLabel:str) -> List[GradeRatingTuple]:
         res = []
         for u_score in UPSCORE_TABLE:
-            rating = UPSCORE_TABLE[0] * UPSCORE_TABLE[1] * self.chart.difficulty.constant
+            rating = UPSCORE_TABLE[0] * UPSCORE_TABLE[1] * self.chart.difficulties[diffLabel]["constant"]
             res.append((UPSCORE_TABLE[2],rating))
 
 
