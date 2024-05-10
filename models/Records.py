@@ -1,3 +1,9 @@
+from Charts import Chart
+from typing import List, Tuple
+
+#Aliases
+GradeRatingTuple = Tuple[str,int]
+
 #From Diving-Fish/maimaidx-prober
 SCORE_COEFFICIENT_TABLE = [
     [0, 0, 'd'],
@@ -17,12 +23,36 @@ SCORE_COEFFICIENT_TABLE = [
     [100.4999, 22.2, 'sss'],
     [100.5, 22.4, 'sssp']
 ]
+UPSCORE_TABLE = [
+    [97, 20, 's'],
+    [99, 20.8, 'ss'],
+    [100, 21.6, 'sss'],
+    [100.5, 22.4, 'sssp']
+]
 
 class Score:
     def __init__(self, recordPercent):
         for i in range(len(SCORE_COEFFICIENT_TABLE)):
             if i == len(SCORE_COEFFICIENT_TABLE) - 1 or recordPercent < SCORE_COEFFICIENT_TABLE[i + 1][0]:
                 self.grade = SCORE_COEFFICIENT_TABLE[i][2]
-                self.constant = SCORE_COEFFICIENT_TABLE[i][1]
+                self.factor = SCORE_COEFFICIENT_TABLE[i][1]
                 self.percent = SCORE_COEFFICIENT_TABLE[i][0]
                 return
+            
+class Record(Score):
+    def __init__(self, chart:Chart, score:Score):
+        self.chart = chart
+        self.score = score
+    
+    def getRating(self) -> int:
+        return self.score.percent * self.score.factor * self.chart.difficulty.constant
+    
+    def getPossibleRating(self) -> List[GradeRatingTuple]:
+        res = []
+        for u_score in UPSCORE_TABLE:
+            rating = UPSCORE_TABLE[0] * UPSCORE_TABLE[1] * self.chart.difficulty.constant
+            res.append((UPSCORE_TABLE[2],rating))
+
+
+
+
