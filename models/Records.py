@@ -1,5 +1,5 @@
-from Charts import Chart
-from typing import List, Tuple
+from models.chart import Song
+from typing import List, Tuple, NamedTuple
 
 #Aliases
 GradeRatingTuple = Tuple[str,int]
@@ -30,28 +30,25 @@ UPSCORE_TABLE = [
     [100.5, 22.4, 'sssp']
 ]
 
-class Score:
-    def __init__(self, recordPercent):
-        for i in range(len(SCORE_COEFFICIENT_TABLE)):
-            if i == len(SCORE_COEFFICIENT_TABLE) - 1 or recordPercent < SCORE_COEFFICIENT_TABLE[i + 1][0]:
-                self.grade = SCORE_COEFFICIENT_TABLE[i][2]
-                self.factor = SCORE_COEFFICIENT_TABLE[i][1]
-                self.percent = SCORE_COEFFICIENT_TABLE[i][0]
-                return
+class Score(NamedTuple):
+    grade: str
+    factor: float
+    percent: float
             
-class Record(Score):
-    def __init__(self, chart:Chart, score:Score):
+class Record:
+    def __init__(self, chart:Song, score:Score):
         self.chart = chart
         self.score = score
     
-    def getRating(self, diffLabel:str) -> int:
-        return self.score.percent * self.score.factor * self.chart.difficulties[diffLabel]["constant"]
+    def get_rating(self, diffLabel:str) -> int:
+        return self.score.percent * self.score.factor * self.chart.difficulties[1]
     
-    def getPossibleRating(self,diffLabel:str) -> List[GradeRatingTuple]:
+    def get_possible_rating(self,diffLabel:str) -> List[GradeRatingTuple]:
         res = []
         for u_score in UPSCORE_TABLE:
-            rating = UPSCORE_TABLE[0] * UPSCORE_TABLE[1] * self.chart.difficulties[diffLabel]["constant"]
+            rating = UPSCORE_TABLE[0] * UPSCORE_TABLE[1] * self.chart.difficulties[1]
             res.append((UPSCORE_TABLE[2],rating))
+        return res
 
 
 
