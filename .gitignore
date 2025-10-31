@@ -1,7 +1,8 @@
+.env
 .venv/
 bin/
 lib/
-
+__pycache__
 .vscode/
 pyvenv.cfg
 
