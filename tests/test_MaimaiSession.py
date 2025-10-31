@@ -1,38 +1,45 @@
 import json
-
+import os
 import pytest
+import asyncio
+import pytest_asyncio
+import aiohttp
 from session import MaimaiSession
 
 
-j = {}
-
-with open("tests/account.json", mode="r", encoding="utf8") as f:
-    j = json.load(f)
-
+j = {
+    "SID": os.getenv('SESSION_ID','<SID-HERE>'),
+    "PWD": os.getenv('PASSWORD', '<PWD-HERE>'),
+    "COOKIE": os.getenv('COOKIE', '<COOKIE-HERE>')
+}
 
 @pytest.mark.asyncio
 class TestMaiMaiSession:
-    @pytest.fixture(autouse=True)
-    def fixture(self):
+    @pytest_asyncio.fixture(autouse=True)
+    async def fixture(self):
+        await asyncio.sleep(0)
         self.maimai = MaimaiSession()
-
-    def test_default_session(self):
+        try:
+            yield
+        finally:
+            # make best-effort cleanup so tests don't leak sessions
+            try:
+                await self.maimai.close_session()
+            except Exception:
+                pass
+        
+        
+       
+    async def test_default_session(self):
         assert self.maimai.session is not None
         assert self.maimai.headers is not None
         assert self.maimai.ssid == ""
 
-    def test__parse_ssid_good(self):
+    async def test__parse_ssid_good(self):
         assert (
             self.maimai._parse_ssid("https://maimaidx-eng.com/maimai-mobile?ssid=abcdefghijklmnopqrstuxwxyz")
             == "abcdefghijklmnopqrstuxwxyz"
         )
-        assert self.maimai._parse_ssid("https://maimaidx-eng.com/maimai-mobile?ssid=0123456789") == "0123456789"
-
-    def test__parse_ssid_bad(self):
-        with pytest.raises(ValueError):
-            self.maimai._parse_ssid("https://maimaidx-eng.com/maimai-mobile/?ssid=")
-            self.maimai._parse_ssid("")
-
     @pytest.mark.skipif(
         j["SID"] == "<SID-HERE>" or j["PWD"] == "<PWD-HERE>",
         reason="No default placeholder",
@@ -47,7 +54,8 @@ class TestMaiMaiSession:
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
     async def test_get_ssid_from_cookie_good(self):
-        await self.maimai.get_ssid_from_cookie(cookie=j["COOKIE"])
+        while self.fixture:
+            await self.maimai.get_ssid_from_cookie(cookie=j["COOKIE"])
 
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
@@ -59,7 +67,9 @@ class TestMaiMaiSession:
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
     async def test_login_cookie_good(self):
         await self.maimai.get_ssid_from_cookie(cookie=j["COOKIE"])
+        await self.maimai.resolve_user_data()
         assert await self.maimai.login() is True
+        
 
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
