@@ -103,23 +103,25 @@ class ALLNETSessionWithCookie():
             else:
                 return ValueError("Invalid auth condition configuration!")
             
-    async def logout(self, referrer: str, logout_route: str) -> bool:
+    async def logout(self, referer: str, logout_route: str) -> bool:
         """'Log-out' from the session. Returns True if logged out successfully."""
         if not self.auth_status: return False
         url = self.url_params["redirect_url"]
-        if not referrer or not logout_route:
+        if not referer or not logout_route:
             raise RuntimeError("Logout method not provided!")
+        else:
+            referer= f'{url}{referer}'
         
-        self.session.headers["Referer"] = referrer
-        
-        logout_success: bool = False 
-        async with self.session.get(f"{url}{logout_route}",):
-            pass
+        logout_success: bool = False
+        self.session.headers["Referer"] = referer
+        await self.session.get(f'{referer}{logout_route}')
         
         async with self.session.get(self.url_params['redirect_url']) as response:
             text = await response.text()
             soup = BeautifulSoup(text, "html.parser")
-            title = [*soup.find_all("title")][0].text
+            title = soup.find("title")
+            if title: title = title.text
+            else: title = ''
             logout_success = title in AUTH_CONDITIONS.get(self.url_params['site_id'],{}).get(False,None)
             
         self.auth_status = not logout_success
