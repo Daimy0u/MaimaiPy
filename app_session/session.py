@@ -51,7 +51,7 @@ Pages: Final[PageParams] = {
                          }
                         }
     
-class ALLNETSessionWithCookie(aiohttp.ClientSession):
+class ALLNETSessionWithCookie():
     _AUTH_URL: Final[LiteralString] = 'https://lng-tgk-aime-gw.am-all.net/common_auth/login'
     _URL_PARAMS: Final[PageParams] = Pages
     
@@ -64,29 +64,31 @@ class ALLNETSessionWithCookie(aiohttp.ClientSession):
         self.routes = page_routes
         self.is_logged_in: bool = False
         self.cookie = clal_cookie
-        self.instance_headers: dict = {
+        self.headers: dict = {
             "Content-Type": "application/x-www-form-urlencoded",
             "Connection": "keep-alive",
         }
-        super().__init__(headers=self.instance_headers)
+        self.session = aiohttp.ClientSession(headers=self.headers)
     
     async def init_ssid(self,*,allow_redirects: bool = True):
-        super().cookie_jar.update_cookies({"clal": self.cookie})
-        async with super().get(self._AUTH_URL, 
+        self.session.cookie_jar.update_cookies({"clal": self.cookie})
+        async with self.session.get(self._AUTH_URL, 
                                allow_redirects=allow_redirects, 
                                params=self.url_params) as response:
-            redirect_queries = response.history[1].url.query
-            if redirect_queries.get('ssid', False):
-                self.ssid = redirect_queries['ssid']
-            else:
+            try:
+                if len(response.history) > 0:
+                    redirect_queries = response.history[1].url.query
+                    if redirect_queries.get('ssid', False):
+                        self.ssid = redirect_queries['ssid']
+            except (IndexError, AttributeError, KeyError):
                 raise ConnectionRefusedError("Invalid authorisation cookie, possibly wrong or revoked.")
-    
+            
     async def login(self):
         if not self.ssid:
             await self.init_ssid()
         
         #todo find better way to store this
-        async with self.get(self.url_params['redirect_url'], params={"ssid": self.ssid}) as response:
+        async with self.session.get(self.url_params['redirect_url'], params={"ssid": self.ssid}) as response:
             text = await response.text()
             soup = BeautifulSoup(text, "html.parser")
             title = [*soup.find_all("title")][0].text
@@ -101,23 +103,25 @@ class ALLNETSessionWithCookie(aiohttp.ClientSession):
             else:
                 return ValueError("Invalid auth condition configuration!")
             
-    async def logout(self, referrer: str, logout_route: str) -> bool:
+    async def logout(self, referer: str, logout_route: str) -> bool:
         """'Log-out' from the session. Returns True if logged out successfully."""
         if not self.auth_status: return False
         url = self.url_params["redirect_url"]
-        if not referrer or not logout_route:
+        if not referer or not logout_route:
             raise RuntimeError("Logout method not provided!")
+        else:
+            referer= f'{url}{referer}'
         
-        self.headers["Referer"] = referrer
+        logout_success: bool = False
+        self.session.headers["Referer"] = referer
+        await self.session.get(f'{referer}{logout_route}')
         
-        logout_success: bool = False 
-        async with super().get(f"{url}{logout_route}"):
-            pass
-        
-        async with super().get(self.url_params['redirect_url']) as response:
+        async with self.session.get(self.url_params['redirect_url']) as response:
             text = await response.text()
             soup = BeautifulSoup(text, "html.parser")
-            title = [*soup.find_all("title")][0].text
+            title = soup.find("title")
+            if title: title = title.text
+            else: title = ''
             logout_success = title in AUTH_CONDITIONS.get(self.url_params['site_id'],{}).get(False,None)
             
         self.auth_status = not logout_success
@@ -138,7 +142,7 @@ class ALLNETSessionWithCookie(aiohttp.ClientSession):
         
         params = {"ssid": getattr(self, "ssid", None)} if getattr(self, "ssid", None) else None
         
-        async with super().get(url, params=params, **kwargs) as response:
+        async with self.session.get(url, params=params, **kwargs) as response:
             return await response.text()
 
 class MaimaiEXSession(ALLNETSessionWithCookie):

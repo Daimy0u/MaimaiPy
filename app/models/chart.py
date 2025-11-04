@@ -14,23 +14,14 @@ class DifficultyTuple(NamedTuple):
     external: str
 
 class Song(BaseModel):
-    song_id = db.Column("id", db.Integer, primary_key=True)
-    title = db.Column("title", db.Text)
-    artist_name = db.Column("artist", db.Text, db.ForeignKey("artist.name"))
+    title = db.Column("title", db.Text, primary_key=True)
+    title_kana = db.Column("title_kana", db.Text, )
+    artist_name = db.Column("artist", db.Text)
     category = db.Column("category", db.String(30))
     bpm = db.Column("bpm", db.Integer)
+    genre = db.Column("genre", db.Text)
     image_url = db.Column("image_url", db.String(255))
-
-class Artist(BaseModel):
-    name = db.Column("name", db.String(50))
         
 class Chart:
-    def __init__(
-            self,
-            title: str = None,
-            artist: str = None,
-            category: str = None,
-            bpm: int = -99,
-            image_url: str = None
-    ):
+    pass
         

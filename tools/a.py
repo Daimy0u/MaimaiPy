@@ -1,7 +1,7 @@
 import requests
 import json
 
-url = "https://dp4p6x0xfi5o9.cloudfront.net/maimai/data.json"
+url = "https://otoge-db.net/maimai/data/music-ex-intl.json"
 
 try:
     resp = requests.get(url)
