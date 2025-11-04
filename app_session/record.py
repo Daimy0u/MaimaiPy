@@ -1,4 +1,4 @@
-from typing import Any, Literal, Union, Final, Optional
+from typing import Literal
 from math import floor
 MDXChartType = Literal['STD','DX']
 MDXChartDifficulty = Literal['ReMASTER', 'MASTER', 'EXPERT', 'ADVANCED','BASIC']
@@ -86,17 +86,17 @@ class RecordEntry:
         if '+' in self._lvl:
             try:
                 res = float(self._lvl[:-1]) + 0.7
-            except:
+            except (ValueError, TypeError):
                 pass
         elif '?' in self._lvl:
             try:
                 res = float(self._lvl[:-1])
-            except:
+            except (ValueError, TypeError):
                 pass
         else:
             try:
                 res = float(self._lvl)
-            except:
+            except (ValueError, TypeError):
                 pass
         return res
             
