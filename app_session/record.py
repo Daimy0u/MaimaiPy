@@ -89,7 +89,7 @@ class RecordEntry:
             res = float(self._lvl[:-1])
         else:
             try: res = float(self._lvl)
-            except: pass
+            except (ValueError, TypeError): pass
         return res
             
     @property
