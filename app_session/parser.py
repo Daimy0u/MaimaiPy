@@ -29,7 +29,8 @@ class MDXParser():
     async def fetch_record(self,difficulty: MDXDifficulty):
         return await self.session.get_html(route=RECORD_URL_MAP[difficulty])
     
-    async def fetch_records(self, excl=[None]):
+    async def fetch_records(self, excl=None):
+        if not excl: excl = [None]
         if not getattr(self,'session',False):
             raise ValueError("Not attached to a session!")
         
@@ -38,7 +39,8 @@ class MDXParser():
             yield (difficulty, self.fetch_record(difficulty))
             await asyncio.sleep(self.TIME_DELAY)
     
-    async def parse_records(self, excl=[None]):
+    async def parse_records(self, excl=None):
+        if not excl: excl = [None]
         async for diff, record in self.fetch_records(excl=excl):
             soup = bs4.BeautifulSoup(await record, "html.parser")
             res: list[RecordEntry] = []
