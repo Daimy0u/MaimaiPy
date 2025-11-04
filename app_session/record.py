@@ -59,7 +59,7 @@ class RecordEntry:
         res: float = 0.0
         try:
             res = float(self._achv[:-1])
-        except: pass
+        except (ValueError, TypeError): pass
         return res
     
     @property

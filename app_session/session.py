@@ -80,7 +80,7 @@ class ALLNETSessionWithCookie():
                     redirect_queries = response.history[1].url.query
                     if redirect_queries.get('ssid', False):
                         self.ssid = redirect_queries['ssid']
-            except:
+            except (IndexError, AttributeError, KeyError):
                 raise ConnectionRefusedError("Invalid authorisation cookie, possibly wrong or revoked.")
             
     async def login(self):
