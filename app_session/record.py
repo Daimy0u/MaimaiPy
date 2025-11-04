@@ -1,4 +1,4 @@
-from typing import Any, Literal, Union, Final
+from typing import Any, Literal, Union, Final, Optional
 from math import floor
 MDXChartType = Literal['STD','DX']
 MDXChartDifficulty = Literal['ReMASTER', 'MASTER', 'EXPERT', 'ADVANCED','BASIC']
@@ -31,7 +31,12 @@ UPSCORE_TABLE = [
 class RecordEntry:
     _type: MDXChartType
     _diff: MDXChartDifficulty
+    data_source: dict = {}
     
+    @classmethod
+    def set_source(cls, source: dict):
+        cls.data_source = source
+        
     def __init__(self,
                  chart_type: MDXChartType, 
                  difficulty: MDXChartDifficulty, 
@@ -72,6 +77,11 @@ class RecordEntry:
     #TODO: Fetch internal constants from database
     @property
     def internal_level(self) -> float:
+        name = self._song.strip()
+        if name in RecordEntry.data_source:
+            if self._type in RecordEntry.data_source[name]['constants']:
+                if self._diff in RecordEntry.data_source[name]['constants'][self._type]:
+                    return RecordEntry.data_source[name]['constants'][self._type][self._diff]
         res = 0.0
         if '+' in self._lvl:
             res = float(self._lvl[:-1]) + 0.7

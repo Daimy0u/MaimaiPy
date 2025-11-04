@@ -1,5 +1,7 @@
 from session import MaimaiSession, MaimaiEXSession
 from parser import MDXParser
+from datasource import SourceConstant
+from record import RecordEntry
 from dotenv import load_dotenv
 import os
 import asyncio
@@ -13,12 +15,14 @@ async def simple_session_test():
     
     mai = MaimaiEXSession(cookie=cookie)
     parse = MDXParser(mai)
+    source = SourceConstant().get()
+    RecordEntry.set_source(source)
     await mai.init_ssid()
     await mai.login()
     async for diff,records in parse.parse_records(excl=['BASIC','ADVANCED']):
         print(f"Fetched diff={diff}, string dumping records:\n")
         for r in records:
-            print(f"({r.chart_type}) {r.difficulty} | {r.song} | achv={r.achievement} rating={r.rating}")
+            print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating}")
         
     #log = await mai.logout("/home/userOption","/logout/?")
    # if not log: print("\n\nNOT LOGGED OUT")
