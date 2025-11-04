@@ -84,12 +84,20 @@ class RecordEntry:
                     return RecordEntry.data_source[name]['constants'][self._type][self._diff]
         res = 0.0
         if '+' in self._lvl:
-            res = float(self._lvl[:-1]) + 0.7
+            try:
+                res = float(self._lvl[:-1]) + 0.7
+            except:
+                pass
         elif '?' in self._lvl:
-            res = float(self._lvl[:-1])
+            try:
+                res = float(self._lvl[:-1])
+            except:
+                pass
         else:
-            try: res = float(self._lvl)
-            except (ValueError, TypeError): pass
+            try:
+                res = float(self._lvl)
+            except:
+                pass
         return res
             
     @property
