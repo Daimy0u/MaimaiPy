@@ -12,6 +12,7 @@ class MDXDataSource(ABC):
     _data_constant: MDXChartInternalMap
     _data_song: dict[MDXSongName,dict]
     _data_sheet: MDXChartSheetMap
+    ready: bool
     
     @classmethod
     @abstractmethod
@@ -23,6 +24,7 @@ class MDXDataSource(ABC):
         cls._data_constant: MDXChartInternalMap = {}
         cls._data_song: dict[MDXSongName,dict] = {}
         cls._data_sheet: MDXChartSheetMap = {}
+        cls.ready = False
     
     @classmethod
     @abstractmethod
@@ -45,6 +47,7 @@ class OtogeDB(MDXDataSource):
             cls._data = resp.json()
             cls._init_data()
             cls.logger.info(f"Fetched {len(cls._songs)} songs and {len(cls._data_sheet)} sheets from {url}")
+            cls.ready = True
         except requests.exceptions.RequestException as e:
             cls.logger.exception(f"Failed to fetch data from {url}: {e}")
             cls._data = None
