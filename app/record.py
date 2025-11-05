@@ -105,7 +105,7 @@ class RecordEntry:
     def rating(self) -> MDXRecordRating:
         rating = 0
         for score,constant,rank in SCORE_COEFFICIENT_TABLE:
-            if self.achievement_float > score:  
+            if self.achievement_float >= score:  
                 curr = (self.achievement_float * (constant/100)) * self.internal_level
                 if curr > rating: rating = curr
         return floor(rating)
