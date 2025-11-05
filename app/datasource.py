@@ -1,5 +1,6 @@
 import requests
 import json
+import logging
 from typing import Literal, Optional, Final
 from data_types.maimaidx import *
 from abc import ABC, abstractmethod
@@ -31,18 +32,21 @@ class MDXDataSource(ABC):
 class OtogeDB(MDXDataSource):
     difficulties: Final[dict[str,MDXChartDifficulty]] = {'remas':'ReMASTER','mas':'MASTER','exp':'EXPERT','adv':'ADVANCED','bas':'BASIC'} 
     types: Final[dict[str,MDXChartType]] = {'dx_':'DX','':'STD'}
-    versions = set()
     
     @classmethod
     def __init__(cls,url='https://otoge-db.net/maimai/data/music-ex-intl.json'):
         super().__init__()
+        cls.logger = logging.getLogger(cls.__name__)
         try:
             resp = requests.get(url)
             resp.raise_for_status()
+            cls._versions = set()
+            cls._songs = set()
             cls._data = resp.json()
             cls._init_data()
+            cls.logger.info(f"Fetched {len(cls._songs)} songs and {len(cls._data_sheet)} sheets from {url}")
         except requests.exceptions.RequestException as e:
-            print(f"Failed to retrieve data: {e}")
+            cls.logger.exception(f"Failed to fetch data from {url}: {e}")
             cls._data = None
     
     @classmethod
@@ -50,6 +54,7 @@ class OtogeDB(MDXDataSource):
         if not cls._data: return {}
         for e in cls._data:
             song: MDXSongName = e["title"]
+            cls._songs.add(song)
             cls._init_song(e,song)
             cls._init_sheet(e,song)
             
@@ -121,6 +126,7 @@ class OtogeDB(MDXDataSource):
             if query_tuple in cls._data_constant:
                 return cls._data_sheet[query_tuple]
             else:
+                cls.logger.debug(f"Queried ({song_name},{chart_type},{difficulty}) with no results.")
                 return None
             
     @classmethod

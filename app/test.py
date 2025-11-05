@@ -1,5 +1,6 @@
 from session import MaimaiSession, MaimaiEXSession
 from parser import MDXParser
+import logging
 from datasource import OtogeDB
 from record import RecordEntry
 from dotenv import load_dotenv
@@ -15,6 +16,9 @@ async def simple_session_test():
     
     #mai = MaimaiEXSession(cookie=cookie)
     #parse = MDXParser(mai)
+    logging.basicConfig(filename='test.log', level=logging.DEBUG)
+    logger = logging.getLogger("Test")
+    logger.info(f'Logger initialised from testing suite.')
     source = OtogeDB()
     RecordEntry.set_source(source)
     songs = source.get_song()
