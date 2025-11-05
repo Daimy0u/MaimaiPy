@@ -1,6 +1,7 @@
 import pytest
 import asyncio
 import pytest_asyncio
+import math
 
 from app.data_types.maimaidx import MDXChartInternalMap
 from app.datasource import OtogeDB, MDXDataSource
@@ -51,10 +52,10 @@ class TestSourceOtogeDB:
     
     @pytest.mark.xfail(reason="Rating calculations are invalid!")
     async def test_chart_rating_calculation(self):
-        comparisons: dict[RecordEntry,float]= {
-            RecordEntry('DX','ReMASTER','100.5012%','15','系ぎて'):(15.0*100.5012*0.224),
-            RecordEntry('DX','ReMASTER','100.4999%','14+','Latent Kingdom'):(14.9*100.4999*0.222),
-            RecordEntry('DX','ReMASTER','100.0000%','14+','躯樹の墓守'):(14.9*100.0*0.216)
+        comparisons: dict = {
+            RecordEntry('DX','ReMASTER','100.5012%','15','系ぎて').rating: math.floor(15.0*100.5012*0.224),
+            RecordEntry('DX','ReMASTER','100.4999%','14+','Latent Kingdom').rating: math.floor(14.9*100.4999*0.222),
+            RecordEntry('DX','ReMASTER','100.0000%','14+','躯樹の墓守').rating: math.floor(14.9*100.0*0.216)
         }
         for record, rating in comparisons.items():
             assert record.rating == rating
