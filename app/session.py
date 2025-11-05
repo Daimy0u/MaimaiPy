@@ -1,6 +1,6 @@
 from enum import EnumMeta, Enum
 import re
-from typing import Union, cast
+from typing import Union, cast, Optional
 from datetime import datetime
 import aiohttp
 import asyncio
@@ -69,25 +69,38 @@ class ALLNETSessionWithCookie():
         }
         self.session = aiohttp.ClientSession(headers=self.headers)
     
-    async def init_ssid(self,*,allow_redirects: bool = True):
-        self.session.cookie_jar.update_cookies({"clal": self.cookie})
+    async def init_ssid(self,cookie_override: Optional[str] = None) -> str:
+        if cookie_override is not None:
+            self.session.cookie_jar.update_cookies({"clal": cookie_override})
+        else:
+            self.session.cookie_jar.update_cookies({"clal": self.cookie})
+            
         async with self.session.get(self._AUTH_URL, 
-                               allow_redirects=allow_redirects, 
+                               allow_redirects=True, 
                                params=self.url_params) as response:
             try:
                 if len(response.history) > 0:
                     redirect_queries = response.history[1].url.query
                     if redirect_queries.get('ssid', False):
                         self.ssid = redirect_queries['ssid']
+                        return self.ssid
             except (IndexError, AttributeError, KeyError):
                 raise ConnectionRefusedError("Invalid authorisation cookie, possibly wrong or revoked.")
+        
+        raise ValueError("SSID not obtainable, is cookie still valid?")
             
-    async def login(self):
-        if not self.ssid:
-            await self.init_ssid()
+    async def login(self, ssid_override: Optional[str] = None):
+        if ssid_override is not None:
+            ssid = ssid_override
+        elif not self.ssid:
+            ssid = self.init_ssid()
+            await ssid
+        else:
+            ssid = self.ssid
+            
         
         #todo find better way to store this
-        async with self.session.get(self.url_params['redirect_url'], params={"ssid": self.ssid}) as response:
+        async with self.session.get(self.url_params['redirect_url'], params={"ssid": ssid}) as response:
             text = await response.text()
             soup = BeautifulSoup(text, "html.parser")
             title = [*soup.find_all("title")][0].text
