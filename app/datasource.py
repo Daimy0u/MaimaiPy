@@ -38,8 +38,8 @@ class OtogeDB(MDXDataSource):
         super().__init__()
         try:
             resp = requests.get(url)
-            resp.raise_for_status()           # → raises if HTTP status is 4xx/5xx
-            cls._data = resp.json()# → parses JSON into dict/list
+            resp.raise_for_status()
+            cls._data = resp.json()
             cls._init_data()
         except requests.exceptions.RequestException as e:
             print(f"Failed to retrieve data: {e}")
