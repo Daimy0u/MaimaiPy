@@ -1,9 +1,8 @@
 from enum import EnumMeta, Enum
 import re
-from typing import Optional, Union, cast
+from typing import Union, cast
 from datetime import datetime
 import aiohttp
-from aiohttp.typedefs import StrOrURL
 import asyncio
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
