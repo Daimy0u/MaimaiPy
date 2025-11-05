@@ -5,7 +5,7 @@ import pytest
 import asyncio
 import pytest_asyncio
 import aiohttp
-from session import MaimaiEXSession
+from app.session import MaimaiEXSession
 
 
 load_dotenv()
