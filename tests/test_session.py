@@ -18,7 +18,7 @@ class TestSessionMaimai:
     @pytest_asyncio.fixture(autouse=True)
     async def fixture(self):
         await asyncio.sleep(0)
-        if j["COOKIE"] != '': raise EnvironmentError("Failed to load .env")
+        if j["COOKIE"] == '': raise EnvironmentError("Failed to load .env")
         
         self.maimai = MaimaiEXSession(cookie=j["COOKIE"])
         try:
@@ -34,9 +34,8 @@ class TestSessionMaimai:
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
     async def test_init_ssid_good(self):
-        while self.fixture:
-            await self.maimai.init_ssid()
-            assert getattr(self.maimai,'ssid',False)
+        await self.maimai.init_ssid()
+        assert getattr(self.maimai,'ssid',False)
 
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
     @pytest.mark.xfail(reason="Cookies somehow revoked in some tests")
