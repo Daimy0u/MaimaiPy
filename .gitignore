@@ -4,5 +4,6 @@ bin/
 lib/
 __pycache__
 .vscode/
+.pytest_cache
 pyvenv.cfg
 
