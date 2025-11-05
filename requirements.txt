@@ -3,6 +3,7 @@ aiohttp[speedups]
 typing_extensions
 flask-sqlalchemy==3.1.1
 flask==3.1.0
+requests
 dotenv
 pytest
 pytest-cov
