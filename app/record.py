@@ -1,7 +1,6 @@
-from typing import Literal
 from math import floor
-from data_types.maimaidx import *
-from datasource import MDXDataSource
+from app.data_types.maimaidx import *
+from app.datasource import MDXDataSource
 SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient,MDXRecordRank]] = [
     (0, 0, 'd'),
     (50, 8, 'c'),

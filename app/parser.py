@@ -1,7 +1,5 @@
-from enum import Enum
-from session import ALLNETSessionWithCookie,MaimaiEXSession
-from record import RecordEntry
-# References obtained from myjian's mai-tools
+from session import MaimaiEXSession
+from app.record import RecordEntry
 import asyncio
 import bs4
 from typing import Literal, Final, Union

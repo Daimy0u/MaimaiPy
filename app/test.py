@@ -1,8 +1,8 @@
-from session import MaimaiSession, MaimaiEXSession
-from parser import MDXParser
+from app.session import MaimaiSession, MaimaiEXSession
+from app.parser import MDXParser
 import logging
-from datasource import OtogeDB
-from record import RecordEntry
+from app.datasource import OtogeDB
+from app.record import RecordEntry
 from dotenv import load_dotenv
 import os
 import asyncio
