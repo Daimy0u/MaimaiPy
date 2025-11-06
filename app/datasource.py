@@ -24,12 +24,22 @@ class MDXDataSource(ABC):
         cls._data_song: dict[MDXSongName,dict] = {}
         cls._data_sheet: MDXChartSheetMap = {}
         cls.ready = False
-    
+
+    @classmethod
+    @abstractmethod
+    def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
+        pass
+
     @classmethod
     @abstractmethod
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
         pass
-    
+
 class OtogeDB(MDXDataSource):
     difficulties: Final[dict[str,MDXChartDifficulty]] = {'remas':'ReMASTER','mas':'MASTER','exp':'EXPERT','adv':'ADVANCED','bas':'BASIC'} 
     types: Final[dict[str,MDXChartType]] = {'dx_':'DX','':'STD'}
