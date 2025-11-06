@@ -19,24 +19,24 @@ RECORD_URL_MAP: dict[MDXDifficulty,str] = {
 
 class MDXParser():
     TIME_DELAY: Final[float] = 6.0
-    
+
     def __init__(self, session: MaimaiEXSession):
         self.session = session
         self.records = []
-    
+
     async def fetch_record(self,difficulty: MDXDifficulty):
         return await self.session.get_html(route=RECORD_URL_MAP[difficulty])
-    
+
     async def fetch_records(self, excl=None):
         if not excl: excl = [None]
         if not getattr(self,'session',False):
             raise ValueError("Not attached to a session!")
-        
+
         for difficulty in RECORD_URL_MAP.keys():
             if difficulty in excl: continue
             yield (difficulty, self.fetch_record(difficulty))
             await asyncio.sleep(self.TIME_DELAY)
-    
+
     async def parse_records(self, excl=None):
         if not excl: excl = [None]
         async for diff, record in self.fetch_records(excl=excl):
