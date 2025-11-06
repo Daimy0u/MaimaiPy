@@ -1,11 +1,13 @@
-from app.session import MaimaiSession, MaimaiEXSession
-from app.parser import MDXParser
 import logging
-from app.datasource import OtogeDB
-from app.record import RecordEntry
-from dotenv import load_dotenv
 import os
 import asyncio
+
+from app.session import MaimaiSession, MaimaiEXSession
+from app.parser import MDXParser
+from app.datasource import OtogeDB, MDXDataSource
+from app.record import RecordEntry
+from dotenv import load_dotenv
+
 if not load_dotenv(): raise EnvironmentError("Failed to load .env")
 loop = asyncio.new_event_loop()
 

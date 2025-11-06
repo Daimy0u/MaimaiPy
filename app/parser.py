@@ -1,11 +1,14 @@
-from session import MaimaiEXSession
-from app.record import RecordEntry
 import asyncio
 import bs4
-from typing import Literal, Final, Union
+from typing import Literal, Final, Union, get_args
+
+from app.session import MaimaiEXSession
+from app.record import RecordEntry
+from app.data_types.maimaidx import *
 
 MDXDifficulty = Literal['ReMASTER', 'MASTER', 'EXPERT', 'ADVANCED','BASIC']
-RecordEntryKeys = Literal['type','song','achievement','difficulty','lvl','raw']
+RecordEntryKeys = Literal['type','song','achievement','difficulty','lvl','dx_score','sync', 'combo']
+
 RecordEntryDict = dict[RecordEntryKeys,Union[str,int,float,None]]
 
 RECORD_URL_MAP: dict[MDXDifficulty,str] = {
