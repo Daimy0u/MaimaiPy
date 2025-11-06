@@ -1,9 +1,15 @@
 # MaimaiPy
+Cookie-based data fetcher using Python. Initially forked from [swyrin/paranormal-maimai](https://github.com/swyrin/paranormal-maimai). Detached as most of the codebase and features have been completely rewritten.
 
-A backend chart/music database utilising flask and flask-sqlalchemy. Originally forked from a maimai standalone python application, this is now planned to become both a standalone app (utilising sqlalchemy), and a flask backend server that is able to process chart data and fetch urls stored on official servers.
+## Features
+`app/session.py` - utilises a modular class as an interface to access pages using the `clal` cookie.
+`app/parser.py` - feeds routes onto the session and parses HTML responses.
+`app/record.py` - class structures of data to be returned by parser.
+`app/datasource.py` - retrieves song metadata from [zvuc/otoge-db](https://github.com/zvuc/otoge-db), can be attached to instances such as `RecordEntry` for seamless access using `@property` attributes.
 
-A web scraping implementation for standalone imports will be implemented further down the line, focusing on functionality via JSON readily available from other maimai tools first.
+
 
 *Random notes*
 Hopefully I dont get sidetracked again.
+
 
