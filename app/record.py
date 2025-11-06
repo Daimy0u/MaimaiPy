@@ -19,13 +19,6 @@ SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient
     (100.4999, 22.2, 'sss'),
     (100.5, 22.4, 'sssp')
 ]
-UPSCORE_TABLE = [
-    [97, 20, 's'],
-    [99, 20.8, 'ss'],
-    [100, 21.6, 'sss'],
-    [100.5, 22.4, 'sssp']
-]
-
 class RecordEntry:
     _type: MDXChartType
     _diff: MDXChartDifficulty
