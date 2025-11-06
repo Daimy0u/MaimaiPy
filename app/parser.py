@@ -23,16 +23,20 @@ RECORD_URL_MAP: dict[MDXDifficulty,str] = {
 
 
 class MDXParser():
+    """Parser class for MaimaiEXSession instances"""
     TIME_DELAY: Final[float] = 6.0
 
     def __init__(self, session: MaimaiEXSession):
+        """Initialises instance variables."""
         self.session = session
         self.records = []
 
     async def fetch_record(self,difficulty: MDXDifficulty):
+        """Fetches HTML of difficulty, route predefined."""
         return await self.session.get_html(route=RECORD_URL_MAP[difficulty])
 
     async def fetch_records(self, excl=None):
+        """Fetches HTML from routes per difficulty predefined in module constants"""
         if not excl: excl = [None]
         if not getattr(self,'session',False):
             raise ValueError("Not attached to a session!")
@@ -43,6 +47,11 @@ class MDXParser():
             await asyncio.sleep(self.TIME_DELAY)
 
     async def parse_records(self, excl=None):
+        """
+        Async generator, parses HTML responses
+        Returns:
+            record_entry_map (dict) = dict[diff,list[RecordEntry]]
+        """
         if not excl: excl = [None]
         async for diff, record in self.fetch_records(excl=excl):
             soup = bs4.BeautifulSoup(await record, "html.parser")

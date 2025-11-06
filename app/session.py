@@ -52,17 +52,18 @@ Pages: Final[PageParams] = {
                             "back_url": "https://maimai.sega.com/",
                          }
                         }
-    
+
 class ALLNETSessionWithCookie():
+    """Base class for aime-based auth"""
     _AUTH_URL: Final[LiteralString] = 'https://lng-tgk-aime-gw.am-all.net/common_auth/login'
     _URL_PARAMS: Final[PageParams] = Pages
-    
+
     def __init__(self, *, clal_cookie: str, page: str, page_routes: type[PageRoutes]):
         if not self._URL_PARAMS.get(page, False):
             raise ValueError(f'ALLNETSessionWithCookie: page {page} is an invalid argument.')
         else:
             self.url_params: Final[dict] = self._URL_PARAMS[page]
-        
+
         self.routes = page_routes
         self.is_logged_in: bool = False
         self.cookie = clal_cookie
@@ -140,11 +141,12 @@ class ALLNETSessionWithCookie():
             if title: title = title.text
             else: title = ''
             logout_success = title in AUTH_CONDITIONS.get(self.url_params['site_id'],{}).get(False,None)
-            
+
         self.auth_status = not logout_success
         return logout_success
 
     async def get_html(self, route: Union[str, PageRoutes], **kwargs):
+        """Fetches html page given route."""
         if isinstance(route, PageRoutes):
             path = route.value
         elif isinstance(route, str):

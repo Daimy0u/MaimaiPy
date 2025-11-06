@@ -1,3 +1,5 @@
+"""Provides classes for play record entries."""
+
 from math import floor
 from app.data_types.maimaidx import *
 from app.datasource import MDXDataSource
@@ -20,23 +22,34 @@ SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient
     (100.5, 22.4, 'sssp')
 ]
 class RecordEntry:
+    """
+    MaimaiDX record entry class
+
+    Call RecordEntry.set_source(source: MDXDataSource) to use external sources for constants.
+
+    Defaults to floor-rounding based on label (e.g. 14+ -> 14.7)
+    """
     _type: MDXChartType
     _diff: MDXChartDifficulty
     data_source: MDXDataSource
-    
+
     @classmethod
     def set_source(cls, source: MDXDataSource):
+        """
+        Directs all RecordEntry instances to use source.
+        """
         cls.data_source = source
-        
+
     def __init__(self,
-                 chart_type: MDXChartType, 
-                 difficulty: MDXChartDifficulty, 
-                 achievement: MDXRecordAchievement, 
-                 lvl: MDXChartLevel, 
+                 chart_type: MDXChartType,
+                 difficulty: MDXChartDifficulty,
+                 achievement: MDXRecordAchievement,
+                 lvl: MDXChartLevel,
                  song: MDXSongName,
                  sync: MDXRecordSync,
                  combo: MDXRecordCombo
                  ):
+        """Initialises internal class variables."""
         self._type: MDXChartType = chart_type
         self._diff: MDXChartDifficulty = difficulty
         self._achv: MDXRecordAchievement = achievement
@@ -44,44 +57,53 @@ class RecordEntry:
         self._song: MDXSongName = song
         self._sync: MDXRecordSync= sync
         self._combo: MDXRecordCombo = combo
-        
-    @property   
+
+    @property
     def achievement(self):
+        """Achievement String"""
         return self._achv
-    
+
     @property
     def achievement_float(self) -> MDXRecordAchievementFloat:
+        """Achievement Float"""
         res: float = 0.0
         try:
             res = float(self._achv[:-1])
         except (ValueError, TypeError): pass
         return res
-    
+
     @property
     def song(self) -> MDXSongName:
+        """Song Name"""
         return self._song
-    
+
     @property
     def chart_type(self) -> MDXChartType:
+        """Chart Type (DX/STD)"""
         return self._type
 
     @property
     def difficulty(self) -> MDXChartDifficulty:
+        """Difficulty"""
         return self._diff
-    
+
     @property
     def combo(self) -> MDXRecordCombo:
+        """Combo Label e.g. fc,fcp,fdx"""
         return self._combo
 
     @property
     def sync(self) -> MDXRecordSync:
+        """Sync label e.g. fs,fsp"""
         return self._sync
-        
-        
-    
-    #TODO: Fetch internal constants from database
+
     @property
     def internal_level(self) -> MDXChartInternal:
+        """
+        Internal constant of chart.
+
+        Fetches from source if set, or lower-bound guess from level label.
+        """
         song_name = self._song.strip()
         res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
         if isinstance(res, float):

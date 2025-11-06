@@ -1,21 +1,28 @@
-import requests
+"""External datasource connectors for internal constants, etc."""
 import logging
 from typing import Optional, Final
-from app.data_types.maimaidx import *
 from abc import ABC, abstractmethod
+import requests
+
+# pylint: disable=unused-wildcard-import
+from app.data_types.maimaidx import *
+
 
 ConstantMapReturnValue = Union[MDXChartInternalMap, MDXChartInternal, None]
 
 class MDXDataSource(ABC):
+    """
+    Base class for datasources outlining methods
+    """
     _data: Union[dict,None]
     _data_constant: MDXChartInternalMap
     _data_song: dict[MDXSongName,dict]
     _data_sheet: MDXChartSheetMap
     ready: bool
-    
+
     @classmethod
     @abstractmethod
-    def __init__(cls) -> None: 
+    def __init__(cls) -> None:
         """
         Initialise internal values here
         """

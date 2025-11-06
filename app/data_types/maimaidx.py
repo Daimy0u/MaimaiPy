@@ -1,3 +1,5 @@
+"""Typing definitions for MaimaiDX"""
+
 from typing import Literal, Union
 
 MDXGameCoefficient = float
