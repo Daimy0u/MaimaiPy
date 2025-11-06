@@ -54,9 +54,9 @@ class TestSourceOtogeDB:
     async def test_chart_rating_calculation(self):
         RecordEntry.set_source(self.source)
         comparisons: dict = {
-            RecordEntry('DX','ReMASTER','100.5012%','15','系ぎて'): math.floor(15.0*100.5012*0.224),
-            RecordEntry('DX','MASTER','100.4999%','14+','Latent Kingdom'): math.floor(14.9*100.4999*0.222),
-            RecordEntry('DX','MASTER','100.0000%','14+','躯樹の墓守'): math.floor(14.9*100.0*0.216)
+            RecordEntry('DX','ReMASTER','100.5012%','15','系ぎて','fs','fc'): math.floor(15.0*100.5012*0.224),
+            RecordEntry('DX','MASTER','100.4999%','14+','Latent Kingdom','',''): math.floor(14.9*100.4999*0.222),
+            RecordEntry('DX','MASTER','100.0000%','14+','躯樹の墓守','',''): math.floor(14.9*100.0*0.216)
         }
         for record, rating in comparisons.items():
             assert record.rating == rating
