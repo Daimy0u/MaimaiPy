@@ -17,6 +17,8 @@ MDXChartSheetMap =dict[MDXChartTuple,dict]
 
 MDXRecordParams = Literal['achievement','achievement_float','rank'] #TODO: DX
 MDXRecordRank = Literal['sssp','sss','ssp','ss','sp','s','aaa','aa','a','bbb','bb','b','c','d']
+MDXRecordSync = Literal['','sync','fs','fsp','fdx','fdxp']
+MDXRecordCombo = Literal['','fc','fcp','ap','app']
 MDXRecordAchievement = str
 MDXRecordAchievementFloat = float
 MDXRecordRating = int
