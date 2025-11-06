@@ -33,13 +33,17 @@ class RecordEntry:
                  difficulty: MDXChartDifficulty, 
                  achievement: MDXRecordAchievement, 
                  lvl: MDXChartLevel, 
-                 song: MDXSongName
+                 song: MDXSongName,
+                 sync: MDXRecordSync,
+                 combo: MDXRecordCombo
                  ):
-        self._type = chart_type
-        self._diff = difficulty
-        self._achv = achievement
-        self._lvl = lvl
-        self._song = song
+        self._type: MDXChartType = chart_type
+        self._diff: MDXChartDifficulty = difficulty
+        self._achv: MDXRecordAchievement = achievement
+        self._lvl: MDXChartLevel = lvl
+        self._song: MDXSongName = song
+        self._sync: MDXRecordSync= sync
+        self._combo: MDXRecordCombo = combo
         
     @property   
     def achievement(self):
@@ -64,6 +68,16 @@ class RecordEntry:
     @property
     def difficulty(self) -> MDXChartDifficulty:
         return self._diff
+    
+    @property
+    def combo(self) -> MDXRecordCombo:
+        return self._combo
+
+    @property
+    def sync(self) -> MDXRecordSync:
+        return self._sync
+        
+        
     
     #TODO: Fetch internal constants from database
     @property
