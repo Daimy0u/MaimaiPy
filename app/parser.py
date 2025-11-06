@@ -48,36 +48,58 @@ class MDXParser():
             #record container
             diff_records = soup.find_all('div',attrs={'class':'w_450 m_15 p_r f_0'})
             for r in diff_records:
-                if r:
-                    record_entry: RecordEntryDict = {'type': None, 'song': None, 'difficulty': diff, 'lvl':0, 'achievement': 0.0, 'raw': None}
-                    #record_entry['raw'] = r.text
-                    rc = r.find('form') # type: ignore
-                    dx_std_img = r.find('img',recursive=False) # type: ignore
-                
-                    if rc is not None and dx_std_img is not None:
-                        if dx_std_img["src"] == 'https://maimaidx-eng.com/maimai-mobile/img/music_dx.png': # type: ignore
-                            record_entry['type'] = 'DX'
-                        else:
-                            record_entry['type'] = 'STD'
-                            
-                        lvl = rc.find('div',attrs={'class':'music_lv_block f_r t_c f_14'})
-                        if lvl: lvl = lvl.text
-                        else: lvl = '?'
-                        record_entry['lvl'] = lvl
-                        
-                        song = rc.find('div',attrs={'class':'music_name_block t_l f_13 break'})
-                        if song: song = song.text
-                        else: song = 'N/A'
-                        record_entry['song'] = song
-                        
-                        achievement = rc.find('div',attrs={'class':'music_score_block w_112 t_r f_l f_12'})
-                        if achievement: achievement = achievement.text
-                        else: achievement = '0.0'
-                        record_entry['achievement'] = achievement
-                        
-                        if achievement != '0.0':
-                            record_entry_class = RecordEntry(chart_type=record_entry['type'],difficulty=diff,achievement=achievement,song=song,lvl=lvl)
-                            res.append(record_entry_class)
+                record_entry: RecordEntryDict = {'type': None, 'song': None, 'difficulty': diff, 'lvl':0, 'achievement': 0.0, 'sync': None, 'combo': None}
+                rc = r.find('form') # type: ignore
+                dx_std_img = r.find('img',recursive=False) # type: ignore
+
+                if rc is not None and dx_std_img is not None:
+                    if dx_std_img["src"] == 'https://maimaidx-eng.com/maimai-mobile/img/music_dx.png': # type: ignore
+                        record_entry['type'] = 'DX'
+                    else:
+                        record_entry['type'] = 'STD'
+
+                    lvl = rc.find('div',attrs={'class':'music_lv_block f_r t_c f_14'})
+                    if lvl: lvl = lvl.text
+                    else: lvl = '?'
+                    record_entry['lvl'] = lvl
+
+                    song = rc.find('div',attrs={'class':'music_name_block t_l f_13 break'})
+                    if song: song = song.text
+                    else: song = 'N/A'
+                    record_entry['song'] = song
+
+                    achievement = rc.find('div',attrs={'class':'music_score_block w_112 t_r f_l f_12'})
+                    if achievement: achievement = achievement.text
+                    else: achievement = '0.0'
+                    record_entry['achievement'] = achievement
+
+                    dx_score = rc.find('div', attrs={'class':'music_score_block w_190 t_r f_l f_12'})
+                    if dx_score: dx_score = dx_score.text
+                    else: dx_score = 'N/A'
+                    record_entry['dx_score'] = dx_score
+
+                    icons = rc.find_all('img', attrs={'class':'h_30 f_r'}, recursive=False)
+                    combo: MDXRecordCombo = ''
+                    sync: MDXRecordSync = ''
+                    
+                    if len(icons) > 0:
+                        if icons[0] and icons[0]['src']:
+                            for sync_type in get_args(MDXRecordSync):
+                                if sync_type != '':
+                                    if f'music_icon_{sync_type}' in icons[0]['src']: 
+                                        sync = sync_type
+                        if len(icons) > 1:
+                            if icons[1] and icons[1]['src']:
+                                combo: MDXRecordCombo = ''
+                                for combo_type in get_args(MDXRecordCombo):
+                                    if combo_type != '':
+                                        if f'music_icon_{combo_type}' in icons[1]['src']: 
+                                            combo = combo_type
+
+
+                    if achievement != '0.0':
+                        record_entry_class = RecordEntry(chart_type=record_entry['type'],difficulty=diff,achievement=achievement,song=song,lvl=lvl,sync=sync,combo=combo)
+                        res.append(record_entry_class)
                 
             yield diff,res
         
