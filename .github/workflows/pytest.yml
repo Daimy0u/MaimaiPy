@@ -4,9 +4,11 @@ on: [push]
 
 jobs:
     build:
-        environment: 
+        permissions:
+            contents: read
+        environment:
             name: testing
-        env: 
+        env:
             COOKIE: ${{ secrets.COOKIE }}
         runs-on: ubuntu-latest
         steps:
@@ -14,20 +16,20 @@ jobs:
         - name: Set up Python
           uses: actions/setup-python@v5
           with:
-            python-version: '3.12'
-            cache: 'pip'
+                python-version: '3.12'
+                cache: 'pip'
         - name: Install dependencies
           run: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
+                python -m pip install --upgrade pip
+                pip install -r requirements.txt
         - name: Test with pytest
           run: |
-            pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
+                pytest tests/ --doctest-modules --junitxml=junit/test-results.xml --cov=app --cov-report=xml --cov-report=html
         - name: Upload test artifacts
           uses: actions/upload-artifact@v4
           with:
-            name: test-artifacts
-            path: |
-              junit/test-results.xml
-              htmlcov/
-              coverage.xml
+                name: test-artifacts
+                path: |
+                    junit/test-results.xml
+                    htmlcov/
+                    coverage.xml
