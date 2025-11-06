@@ -162,7 +162,6 @@ class OtogeDB(MDXDataSource):
             else:
                 return 0.0
 
-            
-            
-            
-            
+
+
+

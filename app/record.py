@@ -90,7 +90,7 @@ class RecordEntry:
             res = 0.0
         else:
             raise ValueError("get_constant with parameters returned map, voodoo magic going on!")
-            
+
         if '+' in self._lvl:
             try:
                 res = float(self._lvl[:-1]) + 0.7
@@ -107,15 +107,17 @@ class RecordEntry:
             except (ValueError, TypeError):
                 pass
         return res
-            
+
     @property
     def rating(self) -> MDXRecordRating:
+        """
+        Rating calculated from constants and self.internal_level property method.
+        """
         rating = 0
         for score,constant,_ in SCORE_COEFFICIENT_TABLE:
-            if self.achievement_float >= score:  
+            if self.achievement_float >= score:
                 curr = (self.achievement_float * (constant/100)) * self.internal_level
                 if curr > rating: rating = curr
         return floor(rating)
-    
-    
-    
+
+

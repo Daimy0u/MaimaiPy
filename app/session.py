@@ -1,15 +1,18 @@
-from enum import EnumMeta, Enum
-import re
+"""Session classes facilitating HTML fetching from auth credentials."""
+
 from typing import Union, cast, Optional
+from typing_extensions import Final, LiteralString
+from enum import EnumMeta, Enum
 from datetime import datetime
+from copy import deepcopy
+
+import re
 import aiohttp
 import asyncio
+
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
-#from models import MaimaiTrack, MaimaiUser
-from typing_extensions import Final, LiteralString
-from urllib.parse import urlparse, parse_qs
-from copy import deepcopy
+
 
 
 __all__ = ["MaimaiSession"]
@@ -24,7 +27,7 @@ class PageRouteMeta(EnumMeta):
             raise error
     def __iter__(self):
         return super().__iter__()
-            
+
 class PageRoutes(Enum, metaclass=PageRouteMeta):
     HOME: str
     PLAYER: str
@@ -36,7 +39,7 @@ class MaimaiEX(PageRoutes):
     PLAYER = '/playerData'
     RECORDS = '/record'
     USER_OPTION = '/home/userOption'
-    
+
 AUTH_CONDITIONS: Final[dict] = {
                                     "maimaidxex": {
                                         False: set(['Login|maimai DX NET','maimai DX NET－Error－'])
@@ -68,15 +71,16 @@ class ALLNETSessionWithCookie():
             "Connection": "keep-alive",
         }
         self.session = aiohttp.ClientSession(headers=self.headers)
-    
+
     async def init_ssid(self,cookie_override: Optional[str] = None) -> str:
+        """Fetches SSID from redirects"""
         if cookie_override is not None:
             self.session.cookie_jar.update_cookies({"clal": cookie_override})
         else:
             self.session.cookie_jar.update_cookies({"clal": self.cookie})
-            
-        async with self.session.get(self._AUTH_URL, 
-                               allow_redirects=True, 
+
+        async with self.session.get(self._AUTH_URL,
+                               allow_redirects=True,
                                params=self.url_params) as response:
             try:
                 if len(response.history) > 0:
@@ -86,10 +90,11 @@ class ALLNETSessionWithCookie():
                         return self.ssid
             except (IndexError, AttributeError, KeyError):
                 raise ConnectionRefusedError("Invalid authorisation cookie, possibly wrong or revoked.")
-        
+
         raise ValueError("SSID not obtainable, is cookie still valid?")
-            
+
     async def login(self, ssid_override: Optional[str] = None):
+        """Invokes self.init_ssid() if self.ssid is not present"""
         if ssid_override is not None:
             ssid = ssid_override
         elif not self.ssid:
@@ -97,8 +102,8 @@ class ALLNETSessionWithCookie():
             await ssid
         else:
             ssid = self.ssid
-            
-        
+
+
         #todo find better way to store this
         async with self.session.get(self.url_params['redirect_url'], params={"ssid": ssid}) as response:
             text = await response.text()
@@ -106,7 +111,7 @@ class ALLNETSessionWithCookie():
             title = [*soup.find_all("title")][0].text
 
             auth_fail = AUTH_CONDITIONS.get(self.url_params['site_id'],{}).get(False,None)
-            
+
             if auth_fail and title not in auth_fail:
                 self.auth_status = True
                 return self.auth_status
@@ -114,7 +119,7 @@ class ALLNETSessionWithCookie():
                 return False
             else:
                 return ValueError("Invalid auth condition configuration!")
-            
+
     async def logout(self, referer: str, logout_route: str) -> bool:
         """'Log-out' from the session. Returns True if logged out successfully."""
         if not self.auth_status: return False
@@ -123,11 +128,11 @@ class ALLNETSessionWithCookie():
             raise RuntimeError("Logout method not provided!")
         else:
             referer= f'{url}{referer}'
-        
+
         logout_success: bool = False
         self.session.headers["Referer"] = referer
         await self.session.get(f'{referer}{logout_route}')
-        
+
         async with self.session.get(self.url_params['redirect_url']) as response:
             text = await response.text()
             soup = BeautifulSoup(text, "html.parser")
@@ -151,13 +156,14 @@ class ALLNETSessionWithCookie():
             raise TypeError("invalid route parameter: must be an instance of str or PageRoutes")
 
         url = f"{self.url_params['redirect_url']}{path}"
-        
+
         params = {"ssid": getattr(self, "ssid", None)} if getattr(self, "ssid", None) else None
-        
+
         async with self.session.get(url, params=params, **kwargs) as response:
             return await response.text()
 
 class MaimaiEXSession(ALLNETSessionWithCookie):
+    """Session class for MaimaiDX export version."""
     DATA_FETCH_LIST: Final[list[str]] = ['PLAYER','RECORDS']
     DATA_PROTOTYPE: Final[dict] = {
         "PLAYER": {"timestamp": 0, "html": None},
@@ -169,20 +175,23 @@ class MaimaiEXSession(ALLNETSessionWithCookie):
         return deepcopy(self.DATA_PROTOTYPE)
 
     def __init__(self, cookie: str):
+        """Initialises via inherited method"""
         super().__init__(clal_cookie=cookie, page='maimaidxex', page_routes=MaimaiEX)
         self.data = self._instance_copy()
-    
+
     async def check_auth(self) -> bool:
+        """Returns auth status"""
         if not getattr(self, "auth_status", False):
             await self.init_ssid()
             auth = self.login()
             await auth
             self.auth_status = bool(auth)
         return self.auth_status
-        
+
     async def get_all_data(self):
+        """Retrieves all HTML data from PageRoutes instance"""
         if not self.check_auth(): raise ValueError("Auth Error")
-        
+
         await asyncio.sleep(5)
         for data_label in self.data.keys():
             html = await self.get_html(data_label)
@@ -190,13 +199,14 @@ class MaimaiEXSession(ALLNETSessionWithCookie):
             self.data[data_label]["html"] = html
             self.data[data_label]["timestamp"] = datetime.now().timestamp()
             await asyncio.sleep(10)
-    
+
     async def get_data(self) -> str:
+        """Fetches and stores last access, returns HTML response"""
         auth = await self.check_auth()
         if not auth: raise ValueError("Auth Fail")
-        
+
         html = await self.get_html('RECORDS')
-        
+
         self.data['RECORDS']["html"] = html
         self.data['RECORDS']["timestamp"] = datetime.now().timestamp()
 

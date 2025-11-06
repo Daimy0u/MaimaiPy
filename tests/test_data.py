@@ -27,7 +27,7 @@ class TestSourceOtogeDB:
         self.source = OtogeDB()
         await await_ready(self.source)
         yield
-        
+
     @pytest.mark.xfail(reason="Constant reference mismatch!")
     async def test_constants_from_reference(self):
         comparisons: MDXChartInternalMap = {
@@ -38,7 +38,7 @@ class TestSourceOtogeDB:
         }
         for arg, ans in comparisons.items():
             assert self.source.get_constant(arg[0],arg[1],arg[2]) == ans
-            
+
     @pytest.mark.xfail(reason="Constant shouldn't exist!")
     async def test_invalid_constants(self):
         comparisons: MDXChartInternalMap = {
@@ -49,7 +49,7 @@ class TestSourceOtogeDB:
         }
         for arg, ans in comparisons.items():
             assert self.source.get_constant(arg[0],arg[1],arg[2]) == ans
-    
+
     @pytest.mark.xfail(reason="Rating calculations are invalid!")
     async def test_chart_rating_calculation(self):
         RecordEntry.set_source(self.source)
@@ -60,7 +60,6 @@ class TestSourceOtogeDB:
         }
         for record, rating in comparisons.items():
             assert record.rating == rating
-            
-            
-        
-    
+
+
+
