@@ -16,13 +16,29 @@ async def simple_session_test():
     if not cookie:
         raise EnvironmentError("Failed to retrieve COOKIE from .env")
     
-    #mai = MaimaiEXSession(cookie=cookie)
-    #parse = MDXParser(mai)
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     logger = logging.getLogger("Test")
     logger.info(f'Logger initialised from testing suite.')
+    
     source = OtogeDB()
     RecordEntry.set_source(source)
+    
+    #test_source(source)
+    
+    mai = MaimaiEXSession(cookie=cookie)
+    parse = MDXParser(mai)
+    await mai.init_ssid()
+    await mai.login()
+    async for diff,records in parse.parse_records(excl=['BASIC','ADVANCED']):
+        print(f"Fetched diff={diff}, string dumping records:\n")
+        for r in records:
+            print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
+        
+    #log = await mai.logout("/home/userOption","/logout/?")
+    # if not log: print("\n\nNOT LOGGED OUT")
+    await mai.session.close()
+
+def test_source(source: MDXDataSource):
     songs = source.get_song()
     if songs:
         for song_name, song_data in songs.items():
@@ -44,18 +60,6 @@ async def simple_session_test():
                                 designer = 'N/A'
                             print(f'{d} ({t}) {constant} | designer={designer}:')
                             print(f'tap={notes["tap"]}, hold={notes["hold"]}, slide={notes["slide"]}, break={notes["break"]} / Total={res["notes"]["total"]}')
-        
-    #await mai.init_ssid()
-    #await mai.login()
-    #async for diff,records in parse.parse_records(excl=['BASIC','ADVANCED']):
-    #    print(f"Fetched diff={diff}, string dumping records:\n")
-    #    for r in records:
-    #        print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating}")
-    #    
-    ##log = await mai.logout("/home/userOption","/logout/?")
-    ## if not log: print("\n\nNOT LOGGED OUT")
-    #await mai.session.close()
-
 if __name__ == "__main__":
     loop.run_until_complete(simple_session_test())
     
