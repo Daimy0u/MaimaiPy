@@ -35,24 +35,43 @@ class MDXDataSource(ABC):
     @classmethod
     @abstractmethod
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
+        """
+        Args: Optional[QueryParameters]
+        Returns: dict or None
+        """
         pass
 
     @classmethod
     @abstractmethod
     def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
+        """
+        Args: Optional[QueryParameters]
+        Returns: dict or None
+        """
         pass
 
     @classmethod
     @abstractmethod
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
+        """
+        Args: Optional[QueryParameters]
+        Returns: float or None
+        """
         pass
 
 class OtogeDB(MDXDataSource):
-    difficulties: Final[dict[str,MDXChartDifficulty]] = {'remas':'ReMASTER','mas':'MASTER','exp':'EXPERT','adv':'ADVANCED','bas':'BASIC'} 
-    types: Final[dict[str,MDXChartType]] = {'dx_':'DX','':'STD'}
-    
+    """
+    OtogeDB external datasource.
+    """
+
+    DIFFICULTY_MAP: Final[dict[str,MDXChartDifficulty]] = {'remas':'ReMASTER','mas':'MASTER','exp':'EXPERT','adv':'ADVANCED','bas':'BASIC'}
+    TYPE_MAP: Final[dict[str,MDXChartType]] = {'dx_':'DX','':'STD'}
+
     @classmethod
     def __init__(cls,url='https://otoge-db.net/maimai/data/music-ex-intl.json'):
+        """
+        Initialises class attributes and calls main data init function.
+        """
         super().__init__()
         cls.logger = logging.getLogger(cls.__name__)
         try:
@@ -67,99 +86,146 @@ class OtogeDB(MDXDataSource):
         except requests.exceptions.RequestException as e:
             cls.logger.exception(f"Failed to fetch data from {url}: {e}")
             cls._data = None
-    
+
     @classmethod
     def _init_data(cls):
-        if not cls._data: return {}
-        for e in cls._data:
-            song: MDXSongName = e["title"]
-            cls._songs.add(song)
-            cls._init_song(e,song)
-            cls._init_sheet(e,song)
-            
-            #CHART CONSTANTS TODO: clean this up
-            if 'dx_lev_mas' in e:
-                if "dx_lev_remas_i" in e and e["dx_lev_remas_i"] != '':
-                    cls._data_constant[(song,'DX','ReMASTER')] = float(e["dx_lev_remas_i"])
-                if "dx_lev_mas_i" in e and e["dx_lev_mas_i"] != "": 
-                    cls._data_constant[(song,'DX','MASTER')] = float(e["dx_lev_mas_i"])
-                if "dx_lev_exp_i" in e and e["dx_lev_exp_i"] != "": 
-                    cls._data_constant[(song,'DX','EXPERT')]= float(e["dx_lev_exp_i"])
-                if "dx_lev_adv_i" in e and e["dx_lev_adv_i"] != "": 
-                    cls._data_constant[(song,'DX','ADVANCED')] = float(e["dx_lev_adv_i"])
-                if "dx_lev_bas_i" in e and e["dx_lev_bas_i"] != "": 
-                    cls._data_constant[(song,'DX','BASIC')] = float(e["dx_lev_bas_i"])
-        
-            if 'lev_mas' in e:
-                if "lev_remas_i" in e and e["lev_remas_i"] != '':
-                    cls._data_constant[(song,'STD','ReMASTER')] = float(e["lev_remas_i"])
-                if "lev_mas_i" in e and e["lev_mas_i"] != "": 
-                    cls._data_constant[(song,'STD','MASTER')] = float(e["lev_mas_i"])
-                if "lev_exp_i" in e and e["lev_exp_i"] != "": 
-                    cls._data_constant[(song,'STD','EXPERT')] = float(e["lev_exp_i"])
-                if "lev_adv_i" in e and e["lev_adv_i"] != "": 
-                    cls._data_constant[(song,'STD','ADVANCED')] = float(e["lev_adv_i"])
-                if "lev_bas_i" in e and e["lev_bas_i"] != "": 
-                    cls._data_constant[(song,'STD','BASIC')] = float(e["lev_bas_i"])
-    
+        """
+        Initialises data and calls other init functions.
+        """
+        if cls._data:
+            for e in cls._data:
+                song: MDXSongName = e["title"]
+                cls._songs.add(song)
+                cls._init_song(e,song)
+                cls._init_sheet(e,song)
+
+                #CHART CONSTANTS TODO: clean this up
+                if 'dx_lev_mas' in e:
+                    if "dx_lev_remas_i" in e:
+                        if e["dx_lev_remas_i"] != '':
+                            cls._data_constant[(song,'DX','ReMASTER')] = float(e["dx_lev_remas_i"])
+                    if "dx_lev_mas_i" in e:
+                        if e["dx_lev_mas_i"] != "":
+                            cls._data_constant[(song,'DX','MASTER')] = float(e["dx_lev_mas_i"])
+                    if "dx_lev_exp_i" in e:
+                        if e["dx_lev_exp_i"] != "":
+                            cls._data_constant[(song,'DX','EXPERT')]= float(e["dx_lev_exp_i"])
+                    if "dx_lev_adv_i" in e:
+                        if e["dx_lev_adv_i"] != "":
+                            cls._data_constant[(song,'DX','ADVANCED')] = float(e["dx_lev_adv_i"])
+                    if "dx_lev_bas_i" in e:
+                        if e["dx_lev_bas_i"] != "":
+                            cls._data_constant[(song,'DX','BASIC')] = float(e["dx_lev_bas_i"])
+
+                if 'lev_mas' in e:
+                    if "lev_remas_i" in e:
+                        if e["lev_remas_i"] != '':
+                            cls._data_constant[(song,'STD','ReMASTER')] = float(e["lev_remas_i"])
+                    if "lev_mas_i" in e:
+                        if e["lev_mas_i"] != "":
+                            cls._data_constant[(song,'STD','MASTER')] = float(e["lev_mas_i"])
+                    if "lev_exp_i" in e:
+                        if e["lev_exp_i"] != "":
+                            cls._data_constant[(song,'STD','EXPERT')] = float(e["lev_exp_i"])
+                    if "lev_adv_i" in e:
+                        if e["lev_adv_i"] != "":
+                            cls._data_constant[(song,'STD','ADVANCED')] = float(e["lev_adv_i"])
+                    if "lev_bas_i" in e:
+                        if e["lev_bas_i"] != "":
+                            cls._data_constant[(song,'STD','BASIC')] = float(e["lev_bas_i"])
+
     @classmethod
     def _init_song(cls, e:dict, s: MDXSongName):
-        SongDataMap: Final[dict] = {'artist':'artist','catcode':'category','bpm':'bpm','image_url':'image_url','wiki_url':'wiki_url','title_kana':'kana'}
-        for field, key in SongDataMap.items():
-            if s not in cls._data_song: 
+        """
+        Initialise song metadata map.
+        """
+        song_data_map: Final[dict] = {'artist':'artist','catcode':'category','bpm':'bpm','image_url':'image_url','wiki_url':'wiki_url','title_kana':'kana'}
+        for field, key in song_data_map.items():
+            if s not in cls._data_song:
                 cls._data_song[s] = {}
-                
-            if field in e: 
+
+            if field in e:
                 cls._data_song[s][key] = e[field]
-            
+
     @classmethod
     def _init_sheet(cls, e: dict, s: MDXSongName):
-        for t_syntax, t in cls.types.items():
-            for d_syntax, d in cls.difficulties.items():
+        """
+        Initialise internal sheet maps.
+        """
+        for t_syntax, t in cls.TYPE_MAP.items():
+            for d_syntax, d in cls.DIFFICULTY_MAP.items():
                 if (s,t,d) not in cls._data_sheet: cls._data_sheet[(s,t,d)] = {}
-                if f'{t_syntax}lev_{d_syntax}_designer' in e: 
+
+                if f'{t_syntax}lev_{d_syntax}_designer' in e:
                     cls._data_sheet[(s,t,d)]['designer'] = e[f'{t_syntax}lev_{d_syntax}_designer']
 
                 if f'{t_syntax}lev_{d_syntax}_notes' in e:
                     if 'notes' not in cls._data_sheet[(s,t,d)]: cls._data_sheet[(s,t,d)]['notes'] = {}
                     cls._data_sheet[(s,t,d)]['notes']['total'] = e[f'{t_syntax}lev_{d_syntax}_notes']
 
-                if f'{t_syntax}lev_{d_syntax}_notes_tap' in e: 
+                if f'{t_syntax}lev_{d_syntax}_notes_tap' in e:
                     cls._data_sheet[(s,t,d)]['notes']['tap'] = e[f'{t_syntax}lev_{d_syntax}_notes_tap']
 
-                if f'{t_syntax}lev_{d_syntax}_notes_hold' in e: 
+                if f'{t_syntax}lev_{d_syntax}_notes_hold' in e:
                     cls._data_sheet[(s,t,d)]['notes']['hold'] = e[f'{t_syntax}lev_{d_syntax}_notes_hold']
 
-                if f'{t_syntax}lev_{d_syntax}_notes_slide' in e: 
+                if f'{t_syntax}lev_{d_syntax}_notes_slide' in e:
                     cls._data_sheet[(s,t,d)]['notes']['slide'] = e[f'{t_syntax}lev_{d_syntax}_notes_slide']
 
-                if f'{t_syntax}lev_{d_syntax}_notes_break' in e: 
+                if f'{t_syntax}lev_{d_syntax}_notes_break' in e:
                     cls._data_sheet[(s,t,d)]['notes']['break'] = e[f'{t_syntax}lev_{d_syntax}_notes_break']
-            
+
     @classmethod
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
-        if song_name is None and chart_type is None and difficulty is None:
-            return cls._data_sheet
-        elif song_name is not None and chart_type is not None and difficulty is not None:
+        """
+        Retrieves a sheet with sheet data (designer,notes).
+        Args:
+            song_name (MDXSongName)
+            chart_type (MDXChartType)
+            difficulty (MDXChartDifficulty)
+
+        Returns:
+            sheet (dict): defaults to None
+            sheet_map (dict): dict[args,sheet]
+        """
+        if song_name is not None and chart_type is not None and difficulty is not None:
             query_tuple: MDXChartTuple = (song_name, chart_type, difficulty)
             if query_tuple in cls._data_constant:
                 return cls._data_sheet[query_tuple]
-            else:
-                cls.logger.debug(f"Queried ({song_name},{chart_type},{difficulty}) with no results.")
-                return None
-            
+            cls.logger.debug(f"Queried ({song_name},{chart_type},{difficulty}) with no results.")
+            return None
+
+        return cls._data_sheet
+
     @classmethod
     def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
+        """
+        Retrieves a sheet with sheet data (designer,notes).
+        Args:
+            song_name (MDXSongName)
+
+        Returns:
+            song_data (dict): defaults to None
+            song_data_map (dict): dict[song_name,song_data]
+        """
         if song_name is None:
             return cls._data_song
         else:
             if song_name in cls._data_constant:
                 return cls._data_song[song_name]
-            else:
-                return None
-            
+            return None
+
     @classmethod
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
+        """
+        Retrieves a sheet with sheet data (designer,notes).
+        Args:
+            song_name (MDXSongName)
+            chart_type (MDXChartType)
+            difficulty (MDXChartDifficulty)
+        Returns:
+            constant (float): 0.0 if not found
+        """
         if song_name is None and chart_type is None and difficulty is None:
             return cls._data_constant
         elif song_name is not None and chart_type is not None and difficulty is not None:
