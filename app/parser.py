@@ -46,14 +46,14 @@ class MDXParser():
             yield (difficulty, self.fetch_record(difficulty))
             await asyncio.sleep(self.TIME_DELAY)
 
-    async def parse_records(self, excl=None):
+    async def parse_records(self, exclude=None):
         """
         Async generator, parses HTML responses
         Returns:
             record_entry_map (dict) = dict[diff,list[RecordEntry]]
         """
-        if not excl: excl = [None]
-        async for diff, record in self.fetch_records(excl=excl):
+        if not exclude: exclude = [None]
+        async for diff, record in self.fetch_records(excl=exclude):
             soup = bs4.BeautifulSoup(await record, "html.parser")
             res: list[RecordEntry] = []
             #record container

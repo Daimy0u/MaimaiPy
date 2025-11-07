@@ -15,25 +15,25 @@ async def simple_session_test():
     cookie = os.getenv('COOKIE',None)
     if not cookie:
         raise EnvironmentError("Failed to retrieve COOKIE from .env")
-    
+
     logging.basicConfig(filename='test.log', level=logging.DEBUG)
     logger = logging.getLogger("Test")
     logger.info(f'Logger initialised from testing suite.')
-    
+
     source = OtogeDB()
     RecordEntry.set_source(source)
-    
+
     #test_source(source)
-    
+
     mai = MaimaiEXSession(cookie=cookie)
     parse = MDXParser(mai)
     await mai.init_ssid()
     await mai.login()
-    async for diff,records in parse.parse_records(excl=['BASIC','ADVANCED']):
+    async for diff,records in parse.parse_records(exclude=['BASIC','ADVANCED']):
         print(f"Fetched diff={diff}, string dumping records:\n")
         for r in records:
             print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
-        
+
     #log = await mai.logout("/home/userOption","/logout/?")
     # if not log: print("\n\nNOT LOGGED OUT")
     await mai.session.close()
@@ -54,7 +54,7 @@ def test_source(source: MDXDataSource):
                     if res and 'notes' in res and constant:
                         notes = res['notes']
                         if 'total' in res['notes']:
-                            if 'designer' in res: 
+                            if 'designer' in res:
                                 designer = res['designer']
                             else:
                                 designer = 'N/A'
@@ -62,5 +62,5 @@ def test_source(source: MDXDataSource):
                             print(f'tap={notes["tap"]}, hold={notes["hold"]}, slide={notes["slide"]}, break={notes["break"]} / Total={res["notes"]["total"]}')
 if __name__ == "__main__":
     loop.run_until_complete(simple_session_test())
-    
+
 
