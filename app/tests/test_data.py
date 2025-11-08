@@ -3,9 +3,9 @@ import asyncio
 import pytest_asyncio
 import math
 
-from app.data_types.maimaidx import MDXChartInternalMap
-from app.datasource import OtogeDB, MDXDataSource
-from app.record import RecordEntry
+from app.types.maimaidx import MDXChartInternalMap
+from app.core.datasource import OtogeDB, MDXDataSource
+from app.models.record import RecordEntry
 
 DELAY = 1
 TIMEOUT = 10

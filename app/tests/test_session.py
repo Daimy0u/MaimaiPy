@@ -5,7 +5,7 @@ import pytest
 import asyncio
 import pytest_asyncio
 import aiohttp
-from app.session import MaimaiEXSession
+from app.core.session import MaimaiEXSession
 
 
 load_dotenv()
@@ -19,7 +19,7 @@ class TestSessionMaimai:
     async def fixture(self):
         await asyncio.sleep(0)
         if j["COOKIE"] == '': raise EnvironmentError("Failed to load .env")
-        
+
         self.maimai = MaimaiEXSession(cookie=j["COOKIE"])
         try:
             yield
@@ -28,7 +28,7 @@ class TestSessionMaimai:
                 await self.maimai.session.close()
             except Exception:
                 pass
-        
+
 
 
     @pytest.mark.skipif(j["COOKIE"] == "<COOKIE-HERE>", reason="No default placeholder")
@@ -51,12 +51,12 @@ class TestSessionMaimai:
         await self.maimai.init_ssid()
         await self.maimai.login()
         new_session = MaimaiEXSession(cookie=j["COOKIE"])
-        
+
         with pytest.raises(RuntimeWarning):
             assert self.maimai.auth_status is True
             await new_session.init_ssid()
             await new_session.login()
             assert await new_session.login() is True
-        
+
         await new_session.session.close()
 

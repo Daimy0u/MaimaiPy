@@ -1,8 +1,9 @@
 """Provides classes for play record entries."""
 
 from math import floor
-from app.data_types.maimaidx import *
-from app.datasource import MDXDataSource
+from app.types.maimaidx import *
+from app.core.datasource import MDXDataSource
+
 SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient,MDXRecordRank]] = [
     (0, 0, 'd'),
     (50, 8, 'c'),

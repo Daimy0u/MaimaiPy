@@ -2,10 +2,10 @@ import logging
 import os
 import asyncio
 
-from app.session import MaimaiSession, MaimaiEXSession
-from app.parser import MDXParser
-from app.datasource import OtogeDB, MDXDataSource
-from app.record import RecordEntry
+from app.core.session import MaimaiEXSession
+from app.core.parser import MDXParser
+from app.core.datasource import OtogeDB, MDXDataSource
+from app.models.record import RecordEntry
 from dotenv import load_dotenv
 
 if not load_dotenv(): raise EnvironmentError("Failed to load .env")
