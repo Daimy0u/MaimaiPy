@@ -1,11 +1,11 @@
 """External datasource connectors for internal constants, etc."""
 import logging
-from typing import Optional, Final
+from typing import Optional, Final, Any
 from abc import ABC, abstractmethod
 import requests
 
 # pylint: disable=unused-wildcard-import
-from app.data_types.maimaidx import *
+from app.types.maimaidx import *
 
 
 ConstantMapReturnValue = Union[MDXChartInternalMap, MDXChartInternal, None]
@@ -97,42 +97,8 @@ class OtogeDB(MDXDataSource):
                 song: MDXSongName = e["title"]
                 cls._songs.add(song)
                 cls._init_song(e,song)
-                cls._init_sheet(e,song)
 
-                #CHART CONSTANTS TODO: clean this up
-                if 'dx_lev_mas' in e:
-                    if "dx_lev_remas_i" in e:
-                        if e["dx_lev_remas_i"] != '':
-                            cls._data_constant[(song,'DX','ReMASTER')] = float(e["dx_lev_remas_i"])
-                    if "dx_lev_mas_i" in e:
-                        if e["dx_lev_mas_i"] != "":
-                            cls._data_constant[(song,'DX','MASTER')] = float(e["dx_lev_mas_i"])
-                    if "dx_lev_exp_i" in e:
-                        if e["dx_lev_exp_i"] != "":
-                            cls._data_constant[(song,'DX','EXPERT')]= float(e["dx_lev_exp_i"])
-                    if "dx_lev_adv_i" in e:
-                        if e["dx_lev_adv_i"] != "":
-                            cls._data_constant[(song,'DX','ADVANCED')] = float(e["dx_lev_adv_i"])
-                    if "dx_lev_bas_i" in e:
-                        if e["dx_lev_bas_i"] != "":
-                            cls._data_constant[(song,'DX','BASIC')] = float(e["dx_lev_bas_i"])
 
-                if 'lev_mas' in e:
-                    if "lev_remas_i" in e:
-                        if e["lev_remas_i"] != '':
-                            cls._data_constant[(song,'STD','ReMASTER')] = float(e["lev_remas_i"])
-                    if "lev_mas_i" in e:
-                        if e["lev_mas_i"] != "":
-                            cls._data_constant[(song,'STD','MASTER')] = float(e["lev_mas_i"])
-                    if "lev_exp_i" in e:
-                        if e["lev_exp_i"] != "":
-                            cls._data_constant[(song,'STD','EXPERT')] = float(e["lev_exp_i"])
-                    if "lev_adv_i" in e:
-                        if e["lev_adv_i"] != "":
-                            cls._data_constant[(song,'STD','ADVANCED')] = float(e["lev_adv_i"])
-                    if "lev_bas_i" in e:
-                        if e["lev_bas_i"] != "":
-                            cls._data_constant[(song,'STD','BASIC')] = float(e["lev_bas_i"])
 
     @classmethod
     def _init_song(cls, e:dict, s: MDXSongName):
@@ -142,19 +108,46 @@ class OtogeDB(MDXDataSource):
         song_data_map: Final[dict] = {'artist':'artist','catcode':'category','bpm':'bpm','image_url':'image_url','wiki_url':'wiki_url','title_kana':'kana'}
         for field, key in song_data_map.items():
             if s not in cls._data_song:
-                cls._data_song[s] = {}
+                charts = cls._init_sheet(e,s)
+                cls._data_song[s] = {'charts': charts}
 
             if field in e:
                 cls._data_song[s][key] = e[field]
+
+
+
 
     @classmethod
     def _init_sheet(cls, e: dict, s: MDXSongName):
         """
         Initialise internal sheet maps.
         """
+        return_value: dict[
+                            MDXChartType,
+                            dict[
+                                MDXChartDifficulty,
+                                Optional[dict[Literal['internal', 'designer', 'notes'],
+                                              Optional[Union[dict,str]]]]
+                            ]
+                        ] = {'DX':{},'STD':{}}
+
         for t_syntax, t in cls.TYPE_MAP.items():
             for d_syntax, d in cls.DIFFICULTY_MAP.items():
-                if (s,t,d) not in cls._data_sheet: cls._data_sheet[(s,t,d)] = {}
+                if (s,t,d) not in cls._data_sheet:
+                    cls._data_sheet[(s,t,d)] = {}
+
+                if f'{t_syntax}lev_{d_syntax}_i' in e:
+                    internal_constant = e[f'{t_syntax}lev_{d_syntax}_i']
+
+                    try:
+                        internal_constant = float(internal_constant)
+                        cls._data_sheet[(s,t,d)]['internal'] = str(round(internal_constant,1))
+                    except (ValueError):
+                        cls._data_sheet[(s,t,d)]['internal'] = internal_constant
+                        internal_constant = 0.0
+
+                    cls._data_constant[(s,t,d)] = internal_constant
+
 
                 if f'{t_syntax}lev_{d_syntax}_designer' in e:
                     cls._data_sheet[(s,t,d)]['designer'] = e[f'{t_syntax}lev_{d_syntax}_designer']
@@ -174,6 +167,15 @@ class OtogeDB(MDXDataSource):
 
                 if f'{t_syntax}lev_{d_syntax}_notes_break' in e:
                     cls._data_sheet[(s,t,d)]['notes']['break'] = e[f'{t_syntax}lev_{d_syntax}_notes_break']
+
+                return_value[t][d] = cls._data_sheet.get((s,t,d))
+
+        if not return_value['DX']:
+            del return_value['DX']
+        elif not return_value['STD']:
+            del return_value['STD']
+
+        return return_value
 
     @classmethod
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:

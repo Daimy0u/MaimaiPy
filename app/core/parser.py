@@ -4,9 +4,9 @@ from typing import Literal, Final, Union, get_args
 import asyncio
 import bs4
 
-from app.session import MaimaiEXSession
-from app.record import RecordEntry
-from app.data_types.maimaidx import *
+from app.core.session import MaimaiEXSession
+from app.models.record import RecordEntry
+from app.types.maimaidx import *
 
 MDXDifficulty = Literal['ReMASTER', 'MASTER', 'EXPERT', 'ADVANCED','BASIC']
 RecordEntryKeys = Literal['type','song','achievement','difficulty','lvl','dx_score','sync', 'combo']
