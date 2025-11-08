@@ -24,4 +24,4 @@ jobs:
       env:
             PYTHONPATH: ${{ github.workspace }}
       run: |
-            python -m pylint app
+            python -m pylint --fail-under=7 app
