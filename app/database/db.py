@@ -2,7 +2,8 @@
 
 import os
 from contextlib import contextmanager
-from typing import Iterator, Optional
+from functools import lru_cache
+from typing import Iterator
 
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
@@ -15,35 +16,64 @@ load_dotenv()
 
 DEFAULT_DATABASE_URL = 'postgresql://maimaiweb:postgres@localhost:5432/maimai-web'
 
-_engine: Optional[Engine] = None
-_SessionFactory: Optional[sessionmaker[Session]] = None
+
+def _resolve_database_url(database_url: str | None = None) -> str:
+    return (
+        database_url
+        or os.getenv('DATABASE_URL')
+        or os.getenv('DATABASE_URI')
+        or DEFAULT_DATABASE_URL
+    )
+
+
+def _build_engine(database_url: str | None = None, **engine_kwargs) -> Engine:
+    url = _resolve_database_url(database_url)
+    kwargs = dict(engine_kwargs)
+    connect_args = dict(kwargs.pop('connect_args', {}))
+
+    if url.startswith('sqlite'):
+        connect_args = {'check_same_thread': False, **connect_args}
+
+    return create_engine(url, connect_args=connect_args or None, **kwargs)
+
+
+@lru_cache(maxsize=1)
+def _get_cached_engine() -> Engine:
+    return _build_engine()
+
+
+def reset_engine_cache() -> None:
+    """Clears the cached default engine."""
+
+    _get_cached_engine.cache_clear()
 
 
 def get_engine(database_url: str | None = None, **engine_kwargs) -> Engine:
     """Initialises and returns a SQLAlchemy engine instance."""
-    global _engine
-
-    if database_url is None and not engine_kwargs and _engine is not None:
-        return _engine
-
-    url = (
-    	database_url
-    	or os.getenv('DATABASE_URL')
-    	or os.getenv('DATABASE_URI')
-    	or DEFAULT_DATABASE_URL
-    )
-    kwargs = dict(engine_kwargs)
-    connect_args = kwargs.pop("connect_args", None)
-
-    if url.startswith('sqlite'):
-        connect_args = {'check_same_thread': False, **(connect_args or {})}
-
-    engine = create_engine(url, connect_args=connect_args, **kwargs)
 
     if database_url is None and not engine_kwargs:
-        _engine = engine
+        return _get_cached_engine()
 
-    return engine
+    return _build_engine(database_url, **engine_kwargs)
+
+
+@lru_cache(maxsize=None)
+def _get_cached_session_factory(
+    expire_on_commit: bool,
+    autoflush: bool,
+) -> sessionmaker:
+    return sessionmaker(
+        bind=get_engine(),
+        expire_on_commit=expire_on_commit,
+        autoflush=autoflush,
+    )
+
+
+def reset_session_factory_cache() -> None:
+    """Clears cached session factories and engine."""
+
+    _get_cached_session_factory.cache_clear()
+    reset_engine_cache()
 
 
 def get_session_factory(
@@ -52,27 +82,20 @@ def get_session_factory(
     expire_on_commit: bool = False,
     autoflush: bool = False,
     reset: bool = False,
-) -> sessionmaker[Session]:
+) -> sessionmaker:
     """Returns a session factory bound to the engine."""
 
-    global _SessionFactory
-
     if reset:
-        _SessionFactory = None
+        reset_session_factory_cache()
 
-    if _SessionFactory is not None and engine is None:
-        return _SessionFactory
+    if engine is not None:
+        return sessionmaker(
+            bind=engine,
+            expire_on_commit=expire_on_commit,
+            autoflush=autoflush,
+        )
 
-    bound_engine = engine or get_engine()
-    factory = sessionmaker(
-        bind=bound_engine,
-        expire_on_commit=expire_on_commit,
-        autoflush=autoflush,
-    )
-    if engine is None:
-        _SessionFactory = factory
-
-    return factory
+    return _get_cached_session_factory(expire_on_commit, autoflush)
 
 
 @contextmanager
