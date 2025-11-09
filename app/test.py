@@ -32,7 +32,8 @@ async def simple_session_test():
     async for diff,records in parse.parse_records(exclude=['BASIC','ADVANCED']):
         print(f"Fetched diff={diff}, string dumping records:\n")
         for r in records:
-            print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
+            print(r, end=',\n')
+            #print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
 
     #log = await mai.logout("/home/userOption","/logout/?")
     # if not log: print("\n\nNOT LOGGED OUT")
