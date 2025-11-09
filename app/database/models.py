@@ -118,7 +118,7 @@ class Chart(TimestampMixin, Base):
 
     __tablename__ = 'charts'
     __table_args__ = (
-        UniqueConstraint('song_id', 'chart_type', 'difficulty', name='uq_chart_identity'),
+        UniqueConstraint('song_title', 'chart_type', 'difficulty', name='uq_chart_identity'),
     )
 
     #primary key composite
