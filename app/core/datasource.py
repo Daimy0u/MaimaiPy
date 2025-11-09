@@ -35,7 +35,6 @@ class MDXDataSource(ABC):
 
     @classmethod
     @abstractmethod
-    @lru_cache
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
         """
         Args: Optional[QueryParameters]
@@ -45,17 +44,20 @@ class MDXDataSource(ABC):
 
     @classmethod
     @abstractmethod
-    @lru_cache
-    def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
+    def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict[MDXSongName, dict[str, Any]]]:
         """
-        Args: Optional[QueryParameters]
-        Returns: dict or None
+        Args:
+            song_name (Optional[MDXSongName]): The name of the song to retrieve
+
+        Returns:
+            Optional[dict[MDXSongName, dict[str, Any]]]:
+                - If song_name is None: Returns full song data map
+                - If song_name is provided: Returns song data dict or None
         """
         pass
 
     @classmethod
     @abstractmethod
-    @lru_cache
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
         """
         Args: Optional[QueryParameters]
@@ -67,7 +69,7 @@ class OtogeDB(MDXDataSource):
     """
     OtogeDB external datasource.
     """
-
+    __name__ = 'OtogeDB'
     DIFFICULTY_MAP: Final[dict[str,MDXChartDifficulty]] = {'remas':'ReMASTER','mas':'MASTER','exp':'EXPERT','adv':'ADVANCED','bas':'BASIC'}
     TYPE_MAP: Final[dict[str,MDXChartType]] = {'dx_':'DX','':'STD'}
 
@@ -183,6 +185,17 @@ class OtogeDB(MDXDataSource):
 
     @classmethod
     @lru_cache
+    def _cached_sheet(cls, song_name, chart_type, difficulty):
+        if song_name is not None and chart_type is not None and difficulty is not None:
+            query_tuple: MDXChartTuple = (song_name, chart_type, difficulty)
+            if query_tuple in cls._data_constant:
+                return cls._data_sheet[query_tuple]
+            cls.logger.debug(f"Queried ({song_name},{chart_type},{difficulty}) with no results.")
+            return None
+
+        return cls._data_sheet
+
+    @classmethod
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
         """
         Retrieves a sheet with sheet data (designer,notes).
@@ -195,17 +208,19 @@ class OtogeDB(MDXDataSource):
             sheet (dict): defaults to None
             sheet_map (dict): dict[args,sheet]
         """
-        if song_name is not None and chart_type is not None and difficulty is not None:
-            query_tuple: MDXChartTuple = (song_name, chart_type, difficulty)
-            if query_tuple in cls._data_constant:
-                return cls._data_sheet[query_tuple]
-            cls.logger.debug(f"Queried ({song_name},{chart_type},{difficulty}) with no results.")
-            return None
-
-        return cls._data_sheet
+        return cls._cached_sheet(song_name,chart_type,difficulty)
 
     @classmethod
     @lru_cache
+    def _cached_song(cls, song_name):
+        if song_name is None:
+            return cls._data_song
+        else:
+            if song_name in cls._data_constant:
+                return cls._data_song[song_name]
+            return None
+
+    @classmethod
     def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
         """
         Retrieves a sheet with sheet data (designer,notes).
@@ -216,15 +231,21 @@ class OtogeDB(MDXDataSource):
             song_data (dict): defaults to None
             song_data_map (dict): dict[song_name,song_data]
         """
-        if song_name is None:
-            return cls._data_song
-        else:
-            if song_name in cls._data_constant:
-                return cls._data_song[song_name]
-            return None
+        return cls._cached_song(song_name)
 
     @classmethod
     @lru_cache
+    def _cached_constant(cls, song_name, chart_type, difficulty) -> ConstantMapReturnValue:
+        if song_name is None and chart_type is None and difficulty is None:
+            return cls._data_constant
+        elif song_name is not None and chart_type is not None and difficulty is not None:
+            query_tuple: MDXChartTuple = (song_name, chart_type, difficulty)
+            if query_tuple in cls._data_constant:
+                return cls._data_constant[query_tuple]
+            else:
+                return 0.0
+
+    @classmethod
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
         """
         Retrieves a sheet with sheet data (designer,notes).
@@ -235,14 +256,7 @@ class OtogeDB(MDXDataSource):
         Returns:
             constant (float): 0.0 if not found
         """
-        if song_name is None and chart_type is None and difficulty is None:
-            return cls._data_constant
-        elif song_name is not None and chart_type is not None and difficulty is not None:
-            query_tuple: MDXChartTuple = (song_name, chart_type, difficulty)
-            if query_tuple in cls._data_constant:
-                return cls._data_constant[query_tuple]
-            else:
-                return 0.0
+        return cls._cached_constant(song_name, chart_type, difficulty)
 
 
 
