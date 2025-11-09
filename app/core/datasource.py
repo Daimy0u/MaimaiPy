@@ -1,4 +1,5 @@
 """External datasource connectors for internal constants, etc."""
+from functools import lru_cache
 import logging
 from typing import Optional, Final, Any
 from abc import ABC, abstractmethod
@@ -34,6 +35,7 @@ class MDXDataSource(ABC):
 
     @classmethod
     @abstractmethod
+    @lru_cache
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
         """
         Args: Optional[QueryParameters]
@@ -43,6 +45,7 @@ class MDXDataSource(ABC):
 
     @classmethod
     @abstractmethod
+    @lru_cache
     def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
         """
         Args: Optional[QueryParameters]
@@ -52,6 +55,7 @@ class MDXDataSource(ABC):
 
     @classmethod
     @abstractmethod
+    @lru_cache
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
         """
         Args: Optional[QueryParameters]
@@ -178,6 +182,7 @@ class OtogeDB(MDXDataSource):
         return return_value
 
     @classmethod
+    @lru_cache
     def get_sheet(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> Optional[dict]:
         """
         Retrieves a sheet with sheet data (designer,notes).
@@ -200,6 +205,7 @@ class OtogeDB(MDXDataSource):
         return cls._data_sheet
 
     @classmethod
+    @lru_cache
     def get_song(cls, song_name: Optional[MDXSongName] = None) -> Optional[dict]:
         """
         Retrieves a sheet with sheet data (designer,notes).
@@ -218,6 +224,7 @@ class OtogeDB(MDXDataSource):
             return None
 
     @classmethod
+    @lru_cache
     def get_constant(cls, song_name: Optional[MDXSongName] = None, chart_type: Optional[MDXChartType] = None, difficulty: Optional[MDXChartDifficulty] = None) -> ConstantMapReturnValue:
         """
         Retrieves a sheet with sheet data (designer,notes).
