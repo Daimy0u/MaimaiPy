@@ -1,6 +1,8 @@
 """Provides classes for play record entries."""
 
+from functools import lru_cache
 from math import floor
+from json import dumps as jsonDump
 from app.types.maimaidx import *
 from app.core.datasource import MDXDataSource
 
@@ -22,6 +24,13 @@ SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient
     (100.4999, 22.2, 'sss'),
     (100.5, 22.4, 'sssp')
 ]
+
+@lru_cache
+def _cached_calculation(coefficient: float, constant: float) -> float:
+    return (coefficient / 100) * constant
+
+
+
 class RecordEntry:
     """
     MaimaiDX record entry class
@@ -58,6 +67,9 @@ class RecordEntry:
         self._song: MDXSongName = song
         self._sync: MDXRecordSync= sync
         self._combo: MDXRecordCombo = combo
+
+        # external datasource status
+        self._fetched = False
 
     @property
     def achievement(self):
@@ -108,7 +120,9 @@ class RecordEntry:
         song_name = self._song.strip()
         res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
         if isinstance(res, float):
-            if res > 0.0: return res
+            if res > 0.0:
+                self._fetched = True
+                return res
         elif not res:
             res = 0.0
         else:
@@ -137,10 +151,56 @@ class RecordEntry:
         Rating calculated from constants and self.internal_level property method.
         """
         rating = 0
-        for score,constant,_ in SCORE_COEFFICIENT_TABLE:
+        for score,constant,rank in SCORE_COEFFICIENT_TABLE:
             if self.achievement_float >= score:
-                curr = (self.achievement_float * (constant/100)) * self.internal_level
-                if curr > rating: rating = curr
+                curr = self.achievement_float * _cached_calculation(constant, self.internal_level)
+                if curr > rating:
+                    rating = curr
         return floor(rating)
+
+    @property
+    def rank(self) -> MDXRecordRank:
+        result_rank: MDXRecordRank = 'd'
+        for score,_,rank in SCORE_COEFFICIENT_TABLE:
+            if self.achievement_float >= score:
+                result_rank = rank
+        return result_rank
+
+
+    @property
+    def valid(self) -> bool:
+        sheet = None
+        if RecordEntry.data_source:
+            sheet = RecordEntry.data_source.get_sheet(self.song,
+                                                      self.chart_type,
+                                                      self.difficulty)
+        return sheet is not None
+
+
+    #String Helpers
+    def __repr__(self) -> str:
+        str_json = {"key": [self.song,
+                            self.chart_type,
+                            self.difficulty],
+
+                    "meta": [self.internal_level,
+                             self.data_source.__name__ if self._fetched else 'Guessing'],
+
+                    "sourced": self.valid,
+
+                    "record": [round(self.achievement_float, 4),
+                               self.rank,
+                               self.combo,
+                               self.sync],
+
+                    "rating": self.rating
+                    }
+
+
+        return jsonDump(str_json, ensure_ascii=False)
+
+
+
+
 
 
