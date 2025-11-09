@@ -14,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    JSON
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
@@ -93,8 +94,7 @@ class Song(TimestampMixin, Base):
 
     __tablename__ = 'songs'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    title: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    title: Mapped[str] = mapped_column(String(255), primary_key=True, nullable=False)
     artist: Mapped[Optional[str]] = mapped_column(String(255))
     category: Mapped[Optional[str]] = mapped_column(String(64))
     bpm: Mapped[Optional[str]] = mapped_column(String(32))
@@ -110,7 +110,7 @@ class Song(TimestampMixin, Base):
     )
 
     def __repr__(self) -> str:  # pragma: no cover - repr utility
-        return f"<Song id={self.id!r} title={self.title!r}>"
+        return f"<Song title={self.title!r} artist={self.artist!r}>"
 
 
 class Chart(TimestampMixin, Base):
@@ -121,14 +121,15 @@ class Chart(TimestampMixin, Base):
         UniqueConstraint('song_id', 'chart_type', 'difficulty', name='uq_chart_identity'),
     )
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    song_id: Mapped[int] = mapped_column(
-        ForeignKey('songs.id', ondelete='CASCADE'),
+    #primary key composite
+    song_title: Mapped[str] = mapped_column(
+        ForeignKey('songs.title', ondelete='CASCADE'),
         nullable=False,
+        primary_key=True,
     )
+    chart_type: Mapped[str] = mapped_column(CHART_TYPE_ENUM, nullable=False, primary_key=True)
+    difficulty: Mapped[str] = mapped_column(CHART_DIFFICULTY_ENUM, nullable=False, primary_key=True)
 
-    chart_type: Mapped[str] = mapped_column(CHART_TYPE_ENUM, nullable=False)
-    difficulty: Mapped[str] = mapped_column(CHART_DIFFICULTY_ENUM, nullable=False)
     internal_constant: Mapped[Optional[float]] = mapped_column(Float)
     designer: Mapped[Optional[str]] = mapped_column(String(255))
 
@@ -139,16 +140,11 @@ class Chart(TimestampMixin, Base):
     notes_break: Mapped[Optional[int]] = mapped_column(Integer)
 
     song: Mapped['Song'] = relationship(back_populates='charts')
-    records: Mapped[list['Record']] = relationship(
-        back_populates='chart',
-        cascade='all, delete-orphan',
-        passive_deletes=True,
-    )
 
     def __repr__(self) -> str:  # pragma: no cover - repr utility
         return (
             "<Chart "
-            f"id={self.id!r} song_id={self.song_id!r} "
+            f"song_title={self.song_title!r} "
             f"type={self.chart_type!r} diff={self.difficulty!r}>"
         )
 
@@ -159,20 +155,8 @@ class Record(TimestampMixin, Base):
     __tablename__ = 'records'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    chart_id: Mapped[int] = mapped_column(
-        ForeignKey('charts.id', ondelete='CASCADE'),
-        nullable=False,
-    )
-
-    achievement: Mapped[str] = mapped_column(String(16), nullable=False)
-    achievement_value: Mapped[Optional[float]] = mapped_column(Float)
-    rank: Mapped[str] = mapped_column(RECORD_RANK_ENUM, nullable=False)
-    sync: Mapped[str] = mapped_column(RECORD_SYNC_ENUM, nullable=False, default='')
-    combo: Mapped[str] = mapped_column(RECORD_COMBO_ENUM, nullable=False, default='')
-    rating: Mapped[Optional[int]] = mapped_column(Integer)
-    comment: Mapped[Optional[str]] = mapped_column(Text)
-
-    chart: Mapped['Chart'] = relationship(back_populates='records')
+    discord_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    entry: Mapped[dict] = mapped_column(JSON, nullable=False)
 
     def __repr__(self) -> str:  # pragma: no cover - repr utility
-        return f"<Record id={self.id!r} chart_id={self.chart_id!r} achievement={self.achievement!r}>"
+        return f"<Record id={self.id!r} discord_user_id={self.discord_id!r} entries={self.entry!r}>"
