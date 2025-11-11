@@ -1,5 +1,6 @@
 .env
 .venv/
+debug_data
 bin/
 lib/
 __pycache__
