@@ -129,16 +129,12 @@ class Chart(TimestampMixin, Base):
     )
     chart_type: Mapped[str] = mapped_column(CHART_TYPE_ENUM, nullable=False, primary_key=True)
     difficulty: Mapped[str] = mapped_column(CHART_DIFFICULTY_ENUM, nullable=False, primary_key=True)
+    level: Mapped[str] = mapped_column(String(8), nullable=False)
 
     internal_constant: Mapped[Optional[float]] = mapped_column(Float)
     designer: Mapped[Optional[str]] = mapped_column(String(255))
 
-    notes_total: Mapped[Optional[int]] = mapped_column(Integer)
-    notes_tap: Mapped[Optional[int]] = mapped_column(Integer)
-    notes_hold: Mapped[Optional[int]] = mapped_column(Integer)
-    notes_slide: Mapped[Optional[int]] = mapped_column(Integer)
-    notes_break: Mapped[Optional[int]] = mapped_column(Integer)
-
+    notes: Mapped[Optional[dict]] = mapped_column(JSON)
     song: Mapped['Song'] = relationship(back_populates='charts')
 
     def __repr__(self) -> str:  # pragma: no cover - repr utility
@@ -148,15 +144,52 @@ class Chart(TimestampMixin, Base):
             f"type={self.chart_type!r} diff={self.difficulty!r}>"
         )
 
+class Account(TimestampMixin, Base):
+    __tablename__ = 'accounts'
+
+    discord_id: Mapped[str] = mapped_column(String(64), primary_key=True, index=True)
+    cookie: Mapped[str] = mapped_column(String(255))
+
+class DiscordMixin:
+    discord_id: Mapped[str] = mapped_column(
+        ForeignKey('accounts.discord_id', ondelete='CASCADE'),
+        nullable=False,
+        primary_key=True,
+        index=True
+    )
+
+
+class MDXAccount(DiscordMixin, TimestampMixin, Base):
+    __tablename__ = 'mdxaccounts'
+
+    username: Mapped[str] = mapped_column(String(255), nullable=False)
+    rating: Mapped[Optional[int]] = mapped_column(Integer)
+    title: Mapped[Optional[str]] = mapped_column(String(255))
+    playcount: Mapped[Optional[str]] = mapped_column(String(64))
+
+    records: Mapped[list['Record']] = relationship(back_populates='mdxaccount',
+                                                   cascade='all, delete-orphan',
+                                                   passive_deletes=True,)
+
 
 class Record(TimestampMixin, Base):
     """A recorded play for a chart."""
 
     __tablename__ = 'records'
 
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    discord_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
-    entry: Mapped[dict] = mapped_column(JSON, nullable=False)
+    discord_id: Mapped[str] = mapped_column(
+        ForeignKey('mdxaccounts.discord_id', ondelete='CASCADE'),
+        nullable=False,
+        primary_key=True,
+        index=True,
+    )
+
+    entries: Mapped[dict] = mapped_column(JSON, nullable=False)
+    mdxaccount: Mapped['MDXAccount'] = relationship(back_populates='records')
 
     def __repr__(self) -> str:  # pragma: no cover - repr utility
-        return f"<Record id={self.id!r} discord_user_id={self.discord_id!r} entries={self.entry!r}>"
+        return f"<Record discord_user_id={self.discord_id!r} entries={self.entries!r}>"
+
+
+
+
