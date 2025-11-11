@@ -4,7 +4,7 @@ import asyncio
 
 from app.core.session import MaimaiEXSession
 from app.core.parser import MDXParser
-from app.core.datasource import OtogeDB, MDXDataSource
+from app.core.datasource import OtogeDB, OtogeDBJPEX, MDXDataSource
 from app.models.record import RecordEntry
 from dotenv import load_dotenv
 
@@ -20,7 +20,8 @@ async def simple_session_test():
     logger = logging.getLogger("Test")
     logger.info(f'Logger initialised from testing suite.')
 
-    source = OtogeDB()
+    source = OtogeDB(useFull=True)
+    OtogeDBJPEX()
     RecordEntry.set_source(source)
 
     #test_source(source)
@@ -29,11 +30,33 @@ async def simple_session_test():
     parse = MDXParser(mai)
     await mai.init_ssid()
     await mai.login()
+    all_records: list[RecordEntry] = []
+    new_charts: list[RecordEntry] = []
+    old_charts: list[RecordEntry] = []
     async for diff,records in parse.parse_records(exclude=['BASIC','ADVANCED']):
-        print(f"Fetched diff={diff}, string dumping records:\n")
+        print(f"Fetched diff={diff}")
         for r in records:
-            print(r, end=',\n')
+            if not source.get_song(r.song): pass
+            is_new = r.is_new()
+            all_records.append(r)
+            if is_new:
+                new_charts.append(r)
+            else:
+                old_charts.append(r)
             #print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
+
+    new_charts_sorted = sorted(new_charts, key=lambda x: (-x.rating, -x.internal_level, -x.achievement_float))
+    old_charts_sorted = sorted(old_charts, key=lambda x: (-x.rating, -x.internal_level, -x.achievement_float))
+
+    for top_i, new in enumerate(new_charts_sorted[:15]):
+        print(f'#{top_i+1}: {new.difficulty} {new.internal_level} {new.song} - {new.rank} {new.achievement} ({new.rating})')
+    for top_i, old in enumerate(old_charts_sorted[:35]):
+        print(f'#{top_i+1}: {old.difficulty} {old.internal_level} {old.song} - {old.rank} {old.achievement} ({old.rating})')
+
+    old_ratings = map(lambda x: x.rating, old_charts_sorted[:35])
+    old_ratings = sum(old_ratings)
+    new_ratings = map(lambda x: x.rating, new_charts_sorted[:15])
+    new_ratings = sum(new_ratings)
 
     #log = await mai.logout("/home/userOption","/logout/?")
     # if not log: print("\n\nNOT LOGGED OUT")
