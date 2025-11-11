@@ -3,8 +3,8 @@ import asyncio
 import pytest_asyncio
 import math
 
-from app.types.maimaidx import MDXChartInternalMap
 from app.core.datasource import OtogeDB, MDXDataSource
+from app.core.games.maimaidx import MaimaiDX
 from app.models.record import RecordEntry
 
 DELAY = 1
@@ -30,7 +30,7 @@ class TestSourceOtogeDB:
 
     @pytest.mark.xfail(reason="Constant reference mismatch!")
     async def test_constants_from_reference(self):
-        comparisons: MDXChartInternalMap = {
+        comparisons: MaimaiDX.ChartInternalMap = {
             ('Latent Kingdom','DX','MASTER'): 14.9,
             ('系ぎて','DX','ReMASTER'): 15.0,
             ('≠彡"/了→','DX','MASTER'): 14.4,
@@ -41,7 +41,7 @@ class TestSourceOtogeDB:
 
     @pytest.mark.xfail(reason="Constant shouldn't exist!")
     async def test_invalid_constants(self):
-        comparisons: MDXChartInternalMap = {
+        comparisons: MaimaiDX.ChartInternalMap = {
             ('Latent Kingdom','STD','MASTER'): 0.0,
             ('系ぎて','STD','ReMASTER'): 0.0,
             ('≠彡"/了→','STD','MASTER'): 0.0,
