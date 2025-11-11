@@ -3,27 +3,15 @@
 from functools import lru_cache
 from math import floor
 from json import dumps as jsonDump
-from app.types.maimaidx import *
-from app.core.datasource import MDXDataSource
 
-SCORE_COEFFICIENT_TABLE: list[tuple[MDXRecordAchievementFloat,MDXGameCoefficient,MDXRecordRank]] = [
-    (0, 0, 'd'),
-    (50, 8, 'c'),
-    (60, 9.6, 'b'),
-    (70, 11.2, 'bb'),
-    (75, 12.0, 'bbb'),
-    (80, 13.6, 'a'),
-    (90, 15.2, 'aa'),
-    (94, 16.8, 'aaa'),
-    (97, 20, 's'),
-    (98, 20.3, 'sp'),
-    (99, 20.8, 'ss'),
-    (99.5, 21.1, 'ssp'),
-    (99.9999, 21.4, 'ssp'),
-    (100, 21.6, 'sss'),
-    (100.4999, 22.2, 'sss'),
-    (100.5, 22.4, 'sssp')
-]
+from app.core.datasource.base import MDXDataSource
+from app.core.games.maimaidx import MaimaiDX
+
+def _is_current(stringable: str | int | float | None) -> bool:
+    if not isinstance(stringable, str):
+        stringable = str(stringable)
+
+    return stringable.strip().upper() in MaimaiDX.VERSION_EX
 
 @lru_cache
 def _cached_calculation(coefficient: float, constant: float) -> float:
@@ -39,8 +27,8 @@ class RecordEntry:
 
     Defaults to floor-rounding based on label (e.g. 14+ -> 14.7)
     """
-    _type: MDXChartType
-    _diff: MDXChartDifficulty
+    _type: MaimaiDX.ChartType
+    _diff: MaimaiDX.ChartDifficulty
     data_source: MDXDataSource
 
     @classmethod
@@ -51,22 +39,22 @@ class RecordEntry:
         cls.data_source = source
 
     def __init__(self,
-                 chart_type: MDXChartType,
-                 difficulty: MDXChartDifficulty,
-                 achievement: MDXRecordAchievement,
-                 lvl: MDXChartLevel,
-                 song: MDXSongName,
-                 sync: MDXRecordSync,
-                 combo: MDXRecordCombo
+                 chart_type: MaimaiDX.ChartType,
+                 difficulty: MaimaiDX.ChartDifficulty,
+                 achievement: MaimaiDX.RecordAchievement,
+                 lvl: MaimaiDX.ChartLevel,
+                 song: MaimaiDX.SongName,
+                 sync: MaimaiDX.RecordSync,
+                 combo: MaimaiDX.RecordCombo
                  ):
         """Initialises internal class variables."""
-        self._type: MDXChartType = chart_type
-        self._diff: MDXChartDifficulty = difficulty
-        self._achv: MDXRecordAchievement = achievement
-        self._lvl: MDXChartLevel = lvl
-        self._song: MDXSongName = song
-        self._sync: MDXRecordSync= sync
-        self._combo: MDXRecordCombo = combo
+        self._type: MaimaiDX.ChartType = chart_type
+        self._diff: MaimaiDX.ChartDifficulty = difficulty
+        self._achv: MaimaiDX.RecordAchievement = achievement
+        self._lvl: MaimaiDX.ChartLevel = lvl
+        self._song: MaimaiDX.SongName = song
+        self._sync: MaimaiDX.RecordSync= sync
+        self._combo: MaimaiDX.RecordCombo = combo
 
         # external datasource status
         self._fetched = False
@@ -77,7 +65,7 @@ class RecordEntry:
         return self._achv
 
     @property
-    def achievement_float(self) -> MDXRecordAchievementFloat:
+    def achievement_float(self) -> MaimaiDX.RecordAchievementFloat:
         """Achievement Float"""
         res: float = 0.0
         try:
@@ -86,32 +74,32 @@ class RecordEntry:
         return res
 
     @property
-    def song(self) -> MDXSongName:
+    def song(self) -> MaimaiDX.SongName:
         """Song Name"""
         return self._song
 
     @property
-    def chart_type(self) -> MDXChartType:
+    def chart_type(self) -> MaimaiDX.ChartType:
         """Chart Type (DX/STD)"""
         return self._type
 
     @property
-    def difficulty(self) -> MDXChartDifficulty:
+    def difficulty(self) -> MaimaiDX.ChartDifficulty:
         """Difficulty"""
         return self._diff
 
     @property
-    def combo(self) -> MDXRecordCombo:
+    def combo(self) -> MaimaiDX.RecordCombo:
         """Combo Label e.g. fc,fcp,fdx"""
         return self._combo
 
     @property
-    def sync(self) -> MDXRecordSync:
+    def sync(self) -> MaimaiDX.RecordSync:
         """Sync label e.g. fs,fsp"""
         return self._sync
 
     @property
-    def internal_level(self) -> MDXChartInternal:
+    def internal_level(self) -> MaimaiDX.ChartInternal:
         """
         Internal constant of chart.
 
@@ -124,6 +112,9 @@ class RecordEntry:
                 self._fetched = True
                 return res
         elif not res:
+            #try again, see if it is resolved
+            res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
+
             res = 0.0
         else:
             raise ValueError("get_constant with parameters returned map, voodoo magic going on!")
@@ -146,26 +137,37 @@ class RecordEntry:
         return res
 
     @property
-    def rating(self) -> MDXRecordRating:
+    def rating(self) -> MaimaiDX.RecordRating:
         """
         Rating calculated from constants and self.internal_level property method.
         """
         rating = 0
-        for score,constant,rank in SCORE_COEFFICIENT_TABLE:
+        for score,constant,rank in MaimaiDX.SCORE_COEFFICIENT_TABLE:
             if self.achievement_float >= score:
-                curr = self.achievement_float * _cached_calculation(constant, self.internal_level)
+                achv = 0.0
+                if self.achievement_float <= 100.5:
+                    achv = self.achievement_float
+                else:
+                    achv = 100.5
+                curr = achv * _cached_calculation(constant, self.internal_level)
                 if curr > rating:
                     rating = curr
         return floor(rating)
 
     @property
-    def rank(self) -> MDXRecordRank:
-        result_rank: MDXRecordRank = 'd'
-        for score,_,rank in SCORE_COEFFICIENT_TABLE:
+    def rank(self) -> MaimaiDX.RecordRank:
+        result_rank: MaimaiDX.RecordRank = 'd'
+        for score,_,rank in MaimaiDX.SCORE_COEFFICIENT_TABLE:
             if self.achievement_float >= score:
                 result_rank = rank
         return result_rank
 
+    def is_new(self) -> bool:
+        if not RecordEntry.data_source:
+            return False
+
+        version = RecordEntry.data_source.get_song_version(song_name=self._song)
+        return _is_current(version)
 
     @property
     def valid(self) -> bool:
@@ -176,28 +178,37 @@ class RecordEntry:
                                                       self.difficulty)
         return sheet is not None
 
+    def as_dict(self):
+        """
+        Convert the record object to a dictionary representation.
 
+        Returns:
+            dict: A dictionary containing the following keys:
+                - key (list): A list containing [song, chart_type, difficulty]
+                - meta (list): A list containing [internal_level, data_source_name or None]
+                - sourced (bool): Indicates whether the record has valid data
+                - record (list): A list containing [achievement_float (rounded to 4 decimals), rank, combo, sync]
+                - rating: The calculated rating value for this record
+        """
+        return {"key": [self.song,
+                self.chart_type,
+                self.difficulty],
+
+                "meta": [self.internal_level,
+                         self.data_source.__name__ if self._fetched else None],
+
+                "sourced": self.valid,
+
+                "record": [round(self.achievement_float, 4),
+                           self.rank,
+                           self.combo,
+                           self.sync],
+
+                "rating": self.rating
+                }
     #String Helpers
     def __repr__(self) -> str:
-        str_json = {"key": [self.song,
-                            self.chart_type,
-                            self.difficulty],
-
-                    "meta": [self.internal_level,
-                             self.data_source.__name__ if self._fetched else 'Guessing'],
-
-                    "sourced": self.valid,
-
-                    "record": [round(self.achievement_float, 4),
-                               self.rank,
-                               self.combo,
-                               self.sync],
-
-                    "rating": self.rating
-                    }
-
-
-        return jsonDump(str_json, ensure_ascii=False)
+        return jsonDump(self.as_dict(), ensure_ascii=False)
 
 
 
