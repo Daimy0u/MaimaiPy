@@ -6,14 +6,12 @@ import bs4
 
 from app.core.session import MaimaiEXSession
 from app.models.record import RecordEntry
-from app.types.maimaidx import *
+from app.core.games.maimaidx import MaimaiDX
 
-MDXDifficulty = Literal['ReMASTER', 'MASTER', 'EXPERT', 'ADVANCED','BASIC']
 RecordEntryKeys = Literal['type','song','achievement','difficulty','lvl','dx_score','sync', 'combo']
-
 RecordEntryDict = dict[RecordEntryKeys,Union[str,int,float,None]]
 
-RECORD_URL_MAP: dict[MDXDifficulty,str] = {
+RECORD_URL_MAP: dict[MaimaiDX.ChartDifficulty, str] = {
     'ReMASTER':'/record/musicGenre/search/?genre=99&diff=4',
     'MASTER':'/record/musicGenre/search/?genre=99&diff=3',
     'EXPERT':'/record/musicGenre/search/?genre=99&diff=2',
@@ -24,14 +22,16 @@ RECORD_URL_MAP: dict[MDXDifficulty,str] = {
 
 class MDXParser():
     """Parser class for MaimaiEXSession instances"""
-    TIME_DELAY: Final[float] = 6.0
+    TIME_DELAY: Final[float] = 0.5
+    debug: bool = False
 
     def __init__(self, session: MaimaiEXSession):
         """Initialises instance variables."""
         self.session = session
         self.records = []
+        self.debug: bool = False
 
-    async def fetch_record(self,difficulty: MDXDifficulty):
+    async def fetch_record(self,difficulty: MaimaiDX.ChartDifficulty):
         """Fetches HTML of difficulty, route predefined."""
         return await self.session.get_html(route=RECORD_URL_MAP[difficulty])
 
@@ -46,6 +46,23 @@ class MDXParser():
             yield (difficulty, self.fetch_record(difficulty))
             await asyncio.sleep(self.TIME_DELAY)
 
+    async def debug_fetch(self, excl=None):
+        if not excl: excl = [None]
+
+        for difficulty in get_args(MaimaiDX.ChartDifficulty):
+            html_str = ''
+            if difficulty in excl: continue
+            try:
+                with open(f'debug_data/{difficulty}.html', 'r') as f:
+                    html_str = str(f.read())
+            except OSError: pass
+            async def _return_html():
+                return html_str
+            yield (difficulty, _return_html())
+
+
+
+
     async def parse_records(self, exclude=None):
         """
         Async generator, parses HTML responses
@@ -53,8 +70,10 @@ class MDXParser():
             record_entry_map (dict) = dict[diff,list[RecordEntry]]
         """
         if not exclude: exclude = [None]
-        async for diff, record in self.fetch_records(excl=exclude):
-            soup = bs4.BeautifulSoup(await record, "html.parser")
+        fetch = self.fetch_records if not getattr(self, 'debug', False) else self.debug_fetch
+        async for diff, record in fetch(excl=exclude):
+            record = await record
+            soup = bs4.BeautifulSoup(record, "html.parser")
             res: list[RecordEntry] = []
             #record container
             diff_records = soup.find_all('div',attrs={'class':'w_450 m_15 p_r f_0'})
@@ -101,19 +120,19 @@ class MDXParser():
 
                     icons = rc.find_all('img',
                                         attrs={'class':'h_30 f_r'}, recursive=False)
-                    combo: MDXRecordCombo = ''
-                    sync: MDXRecordSync = ''
+                    combo: MaimaiDX.RecordCombo = ''
+                    sync: MaimaiDX.RecordSync = ''
 
                     if len(icons) > 0:
                         if icons[0] and icons[0]['src']:
-                            for sync_type in get_args(MDXRecordSync):
+                            for sync_type in get_args(MaimaiDX.RecordSync):
                                 if sync_type != '':
                                     if f'music_icon_{sync_type}' in icons[0]['src']:
                                         sync = sync_type
                         if len(icons) > 1:
                             if icons[1] and icons[1]['src']:
-                                combo: MDXRecordCombo = ''
-                                for combo_type in get_args(MDXRecordCombo):
+                                combo: MaimaiDX.RecordCombo = ''
+                                for combo_type in get_args(MaimaiDX.RecordCombo):
                                     if combo_type != '':
                                         if f'music_icon_{combo_type}' in icons[1]['src']:
                                             combo = combo_type
