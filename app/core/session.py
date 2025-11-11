@@ -92,15 +92,14 @@ class ALLNETSessionWithCookie():
             except (IndexError, AttributeError, KeyError):
                 raise ConnectionRefusedError("Invalid authorisation cookie, possibly wrong or revoked.")
 
-        raise ValueError("SSID not obtainable, is cookie still valid?")
+        raise ValueError(f"SSID not obtainable, is cookie still valid? Redirects={str(list(response.history))}")
 
     async def login(self, ssid_override: Optional[str] = None):
         """Invokes self.init_ssid() if self.ssid is not present"""
         if ssid_override is not None:
             ssid = ssid_override
-        elif not self.ssid:
-            ssid = self.init_ssid()
-            await ssid
+        elif not getattr(self, 'ssid', None):
+            ssid = await self.init_ssid()
         else:
             ssid = self.ssid
 
