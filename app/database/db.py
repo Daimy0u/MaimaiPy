@@ -34,7 +34,7 @@ def _build_engine(database_url: str | None = None, **engine_kwargs) -> Engine:
     if url.startswith('sqlite'):
         connect_args = {'check_same_thread': False, **connect_args}
 
-    return create_engine(url, connect_args=connect_args or None, **kwargs)
+    return create_engine(url, connect_args=connect_args or [], **kwargs)
 
 
 @lru_cache(maxsize=1)
