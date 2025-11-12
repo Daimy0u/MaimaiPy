@@ -136,6 +136,134 @@ class MDXParser():
 
             yield diff,res
 
+    async def fetch_recent_record(self):
+        #if not self.session.auth_status:
+        #    await self.session.login()
+
+        #recent = self.session.get_html(route=MaimaiDX.Routes.RecordData)
+        with open('debug_data/recent.html', 'r+') as f:
+            recent = f.read()
+        if not recent: raise TypeError()
+        #recent = await recent
+        soup = bs4.BeautifulSoup(recent, "html.parser")
+
+        html_records = soup.find_all('div',attrs={'class':'p_10 t_l f_0 v_b'})
+
+        for r in html_records:
+            timestamp: Optional[str] = ''
+            callback_url: Optional[str] = None
+            record_entry = {'type': None,
+                            'song': None,
+                            'difficulty': None,
+                            'lvl': 'N/A',
+                            'achievement': "0.0",
+                            'sync': '',
+                            'combo': ''}
+            meta = r.find_next('div',attrs={'class': 'sub_title t_c f_r f_11'})
+            if meta:
+                metas = meta.find_all('span', class_='v_b')
+                if len(metas) > 1:
+                    timestamp = metas[1].get_text()
+
+            log_container = None
+            #Find container
+            for diff in get_args(MaimaiDX.ChartDifficulty):
+                d_text = str(diff).lower()
+                log_container = r.find('div', attrs={'class':f'playlog_{d_text}_container'})
+                if log_container:
+                    record_entry['difficulty'] = diff
+                    break
+
+            if log_container:
+                song_text = log_container.find('div',attrs={'class':'basic_block m_5 m_t_17 m_r_60 p_5 p_l_10 f_13 break'})
+                if not song_text: continue
+
+                level = song_text.find('div', class_='music_lv_back m_3 m_b_0 f_r t_c f_14 p_a playlog_level_icon')
+                if level:
+                    record_entry['lvl'] = level.get_text(strip=True)
+                    level.extract()
+                record_entry['song'] = song_text.get_text(strip=True)
+
+                main_container = log_container.find('div', class_='p_r f_0')
+                if not main_container: continue
+
+                #chart type
+                img = main_container.find('img', class_='playlog_music_kind_icon')
+                if img:
+                    img_src = img.attrs['src']
+                    if not img_src: continue
+                    if img_src == 'https://maimaidx-eng.com/maimai-mobile/img/music_dx.png':
+                        record_entry['type'] = 'DX'
+                    else:
+                        record_entry['type'] = 'STD'
+
+                #achievement %
+                achv_int = main_container.find('div', class_='playlog_achievement_txt t_r')
+                if achv_int:
+                    achv_dec = achv_int.find('span', attrs={'class':'f_20'})
+                    if achv_dec:
+                        record_entry['achievement'] = achv_int.text
+
+                #combo/sync status
+                combo, sync = '',''
+                combo_sync = main_container.find_all('img',class_='h_35 m_5 f_l')
+                if combo_sync:
+                    for c_s_entry in combo_sync:
+                        img_src = c_s_entry.attrs.get('src', None)
+                        if not img_src: continue
+                        for sync_type in get_args(MaimaiDX.RecordSync):
+                            if 'sync_dummy.png' in img_src or 'fc_dummy.png' in img_src: break
+                            if sync_type != '':
+                                if f'{sync_type}.png' in img_src:
+                                    sync = sync_type
+                                    break
+                        for combo_type in get_args(MaimaiDX.RecordCombo):
+                            if 'sync_dummy.png' in img_src or 'fc_dummy.png' in img_src: break
+                            if combo_type != '':
+                                if f'{combo_type}.png' in img_src:
+                                    combo = combo_type
+                                    break
+                record_entry['combo'] = combo
+                record_entry['sync'] = sync
+
+                callback_param = log_container.find('input', attrs={'name': 'idx', 'type': 'hidden'})
+                if callback_param:
+                    callback_value = str(callback_param.get('value'))
+                    if callback_value:
+                        cb_a, cb_b = callback_value.split(',')
+                        callback_url = f"https://maimaidx-eng.com/maimai-mobile/record/playlogDetail/?idx={cb_a}%2C{cb_b}"
+
+                #three key parameters (searchable)
+                if not record_entry['type'] or not record_entry['difficulty'] or not record_entry['song']:
+                    continue
+
+                record = RecordEntry(record_entry['type'],
+                                     record_entry['difficulty'],
+                                     record_entry['achievement'],
+                                     record_entry['lvl'],
+                                     record_entry['song'],
+                                     record_entry['sync'],
+                                     record_entry['combo'])
+
+                yield (timestamp, record, callback_url)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
