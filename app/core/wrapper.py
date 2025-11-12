@@ -13,6 +13,5 @@ from app.models.record import RecordEntry
 
 class Server:
     def __init__(self):
-        self.session_queue = deque()
+        self.session_queue: deque[MaimaiEXSession] = deque()
 
-    def
