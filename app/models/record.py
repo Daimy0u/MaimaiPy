@@ -4,6 +4,8 @@ from functools import lru_cache
 from math import floor
 from json import dumps as jsonDump
 
+from typing import Any, Optional, TypeAlias
+
 from app.core.datasource.base import MDXDataSource
 from app.core.games.maimaidx import MaimaiDX
 
@@ -17,7 +19,7 @@ def _is_current(stringable: str | int | float | None) -> bool:
 def _cached_calculation(coefficient: float, constant: float) -> float:
     return (coefficient / 100) * constant
 
-
+ScoreDifference = float
 
 class RecordEntry:
     """
@@ -58,6 +60,11 @@ class RecordEntry:
 
         # external datasource status
         self._fetched = False
+
+    def resolve_inputs(self):
+        if not self._type or not self._diff or not self._song:
+            raise ValueError("Missing key parameters for record!")
+
 
     @property
     def achievement(self):
@@ -106,16 +113,14 @@ class RecordEntry:
         Fetches from source if set, or lower-bound guess from level label.
         """
         song_name = self._song.strip()
-        res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
+        if RecordEntry.data_source:
+            res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
+        else:
+            res = 0.0
         if isinstance(res, float):
             if res > 0.0:
                 self._fetched = True
                 return res
-        elif not res:
-            #try again, see if it is resolved
-            res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
-
-            res = 0.0
         else:
             raise ValueError("get_constant with parameters returned map, voodoo magic going on!")
 
@@ -177,6 +182,18 @@ class RecordEntry:
                                                       self.chart_type,
                                                       self.difficulty)
         return sheet is not None
+
+    def as_print_str(self) -> str:
+        s_new = "NEW" if self.is_new() else "OLD"
+        return "%s %s (%d) - %s: Rating=%d, Achievement=%d, Combo=%s, Sync=%s" % (s_new,
+                                                                                  self.difficulty,
+                                                                                  self.internal_level,
+                                                                                  self.song,
+                                                                                  self.rating,
+                                                                                  self.achievement_float,
+                                                                                  self.combo,
+                                                                                  self.sync)
+
 
     def as_dict(self):
         """
