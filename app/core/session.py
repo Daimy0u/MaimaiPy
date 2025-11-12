@@ -45,16 +45,20 @@ Pages: Final[PageParams] = {
 class ALLNETSessionWithCookie():
     """Base class for aime-based auth"""
     _AUTH_URL: Final[LiteralString] = 'https://lng-tgk-aime-gw.am-all.net/common_auth/login'
-    _URL_PARAMS: Final[PageParams] = Pages
+    _URL_PARAMS_SRC: Final[PageParams] = Pages
 
-    def __init__(self, *, clal_cookie: str, page: str, page_routes: type[PageRoutes]):
-        if not self._URL_PARAMS.get(page, False):
-            raise ValueError(f'ALLNETSessionWithCookie: page {page} is an invalid argument.')
+    def __init__(self, *, clal_cookie: str, game: type[GameMetadata]):
+        if not game.Site:
+            if not game.Site.id or not game.Site.Home or not game.Site.Back:
+                raise ValueError(f'ALLNETSessionWithCookie: failed to extract site parameters from {game.__name__}')
         else:
-            self.url_params: Final[dict] = self._URL_PARAMS[page]
+            self.url_params: Final[dict] = {"site_id": game.Site.id.value,
+                                            "redirect_url": game.Site.Home.value,
+                                            "back_url": game.Site.Back.value}
 
-        self.routes = page_routes
+        self.routes = game.Routes
         self.is_logged_in: bool = False
+        self.auth_status = False
         self.cookie = clal_cookie
         self.headers: dict = {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -166,7 +170,7 @@ class MaimaiEXSession(ALLNETSessionWithCookie):
 
     def __init__(self, cookie: str):
         """Initialises via inherited method"""
-        super().__init__(clal_cookie=cookie, page='maimaidxex', page_routes=MaimaiEX)
+        super().__init__(clal_cookie=cookie, game=MaimaiDX)
         self.data = self._instance_copy()
 
     async def check_auth(self) -> bool:
@@ -177,30 +181,6 @@ class MaimaiEXSession(ALLNETSessionWithCookie):
             await auth
             self.auth_status = bool(auth)
         return self.auth_status
-
-    async def get_all_data(self):
-        """Retrieves all HTML data from PageRoutes instance"""
-        if not self.check_auth(): raise ValueError("Auth Error")
-
-        await asyncio.sleep(5)
-        for data_label in self.data.keys():
-            html = await self.get_html(data_label)
-            print(html)
-            self.data[data_label]["html"] = html
-            self.data[data_label]["timestamp"] = datetime.now().timestamp()
-            await asyncio.sleep(10)
-
-    async def get_data(self) -> str:
-        """Fetches and stores last access, returns HTML response"""
-        auth = await self.check_auth()
-        if not auth: raise ValueError("Auth Fail")
-
-        html = await self.get_html('RECORDS')
-
-        self.data['RECORDS']["html"] = html
-        self.data['RECORDS']["timestamp"] = datetime.now().timestamp()
-
-        return html
 
 class MaimaiSession:
     """Basic maimaiDX client session, I hope it works."""
