@@ -211,6 +211,133 @@ class RecordEntry:
         return jsonDump(self.as_dict(), ensure_ascii=False)
 
 
+class RecordContainer:
+    """Handle record entry at one time point."""
+    entries: list[RecordEntry] = []
+
+    def __init__(self, entries: Optional[list[RecordEntry]] = None):
+
+        if not entries:
+            entries = []
+
+        self.entries = entries
+        self.unique = set([(e.song, e.chart_type, e.difficulty, e.achievement) for e in self.entries])
+        self.record_map: dict = {(e.song, e.chart_type, e.difficulty): e for e in self.entries}
+
+    def __str__(self) -> str:
+        if not self.entries:
+            return '[]'
+
+        records_str = [str(e)+',' for e in self.entries]
+        if records_str[-1] == ',':
+            records_str = records_str[:-1]
+        return '[' + ''.join(records_str) + ']'
+
+    def _tuple_set(self, record: RecordEntry):
+        return (record.song, record.chart_type, record.difficulty, record.achievement)
+
+    def _tuple_map(self, record: RecordEntry):
+        return (record.song, record.chart_type, record.difficulty)
+
+    def remove(self, set_tuple: tuple[Any, Any, Any, Any],
+                    replace: Optional[RecordEntry] = None):
+        for i,r in enumerate(self.entries):
+            if (r.song, r.chart_type, r.difficulty, r.achievement) == set_tuple:
+                self.entries.pop(i)
+                if replace:
+                    self.entries.insert(i, replace)
+                break
+
+    def add(self, record: RecordEntry):
+        if self._tuple_set(record) in self.unique: return
+
+        if self._tuple_map(record) in self.record_map:
+            current = self.record_map[self._tuple_map(record)]
+            if record.achievement_float > current.achievement_float:
+                #upscore
+                self.unique.remove(self._tuple_set(current))
+
+                self.remove(self._tuple_set(current), replace=record)
+                self.record_map[self._tuple_map(record)] = record
+
+                self.unique.add(self._tuple_set(record))
+
+        self.record_map[self._tuple_map(record)] = record
+        self.unique.add((record.song, record.chart_type, record.difficulty, record.achievement))
+
+    def compare(self, older: 'RecordContainer'):
+        newscores, upscores, downscores = (0, 0, 0)
+        result: list[tuple[RecordEntry, ScoreDifference]] = []
+
+        difference = self.unique - older.unique
+        for diff in difference:
+            d_song, d_type, d_diff, _ = (d_tuple) = diff
+            d_query = (d_song, d_type, d_diff)
+
+            #if not in ours, current container is most likely a subset of all records
+            #thus there's going to be alot of"oh deleted score!"
+            #but if they did delete the sheet, need a datasource logic to verify.
+            if d_tuple in self.unique:
+                if d_tuple not in self.record_map:
+                    raise ValueError("Unique set and record map mismatch!")
+
+                this_record: RecordEntry = self.record_map[d_query]
+
+                #if score did not exist -> newscore
+                if (d_query) not in older.record_map:
+                    newscores += 1
+                    result.append((this_record, this_record.achievement_float))
+                else:
+                    other_record = older.record_map[d_query]
+
+                    #if this is higher than older -> upscore
+                    achv_diff = this_record.achievement_float - other_record.achievement_float
+
+                    if achv_diff > 0:
+                        upscores += 1
+                    elif achv_diff < 0:
+                        #normally not possible unless comparing with recent playlogs
+                        downscores += 1
+
+                    result.append((this_record, achv_diff))
+
+        return (upscores, downscores, newscores), result
+
+    def get_top_50(self):
+        new: list[RecordEntry] = []
+        old: list[RecordEntry] = []
+        for e in self.entries:
+            if e.is_new():
+                new.append(e)
+            else:
+                old.append(e)
+
+        if len(new) > 15:
+            new = new[:15]
+        if len(old) > 35:
+            old = old[:35]
+
+        new = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
+        old = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
+
+        new_rating = sum(e.rating for e in new)
+        old_rating = sum(e.rating for e in old)
+        total = new_rating + old_rating
+
+        return (new, new_rating), (old, old_rating), total
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
