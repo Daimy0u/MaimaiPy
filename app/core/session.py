@@ -13,6 +13,7 @@ import asyncio
 from bs4 import BeautifulSoup, Tag
 from bs4.element import NavigableString
 
+from app.core.games.maimaidx import MaimaiDX, GameMetadata, SiteMeta, PageRoutes
 
 
 __all__ = ["MaimaiSession"]
@@ -27,18 +28,6 @@ class PageRouteMeta(EnumMeta):
             raise error
     def __iter__(self):
         return super().__iter__()
-
-class PageRoutes(Enum, metaclass=PageRouteMeta):
-    HOME: str
-    PLAYER: str
-    RECORDS: str
-    USER_OPTION: str
-
-class MaimaiEX(PageRoutes):
-    HOME = '/home'
-    PLAYER = '/playerData'
-    RECORDS = '/record'
-    USER_OPTION = '/home/userOption'
 
 AUTH_CONDITIONS: Final[dict] = {
                                     "maimaidxex": {

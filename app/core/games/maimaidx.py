@@ -1,7 +1,23 @@
-from typing import Final, Literal, Union
-from typing import TypeAlias
+from enum import Enum
+from typing import Final, Literal, Union, TypeAlias, ClassVar
 
-class MaimaiDX:
+class SiteMeta(Enum):
+    id: ClassVar[str]
+    Home: ClassVar[str]
+    Back: ClassVar[str]
+class PageRoutes(Enum):
+    Home: str
+    PlayerData: str
+    RecordData: str
+    Record: dict
+    UserOptions: str
+class GameMetadata:
+    Site: ClassVar[type[SiteMeta]] = SiteMeta
+    Routes: ClassVar[type[PageRoutes]] = PageRoutes
+    pass
+class MaimaiDX(GameMetadata):
+    __name__ = 'maimaidx'
+
     ScoreCoefficient: TypeAlias = float
     SongName: TypeAlias = str | Literal['N/A']
     ChartLevel: TypeAlias = str | Literal['N/A']
@@ -15,6 +31,21 @@ class MaimaiDX:
     RecordRank: TypeAlias = Literal['sssp','sss','ssp','ss','sp','s','aaa','aa','a','bbb','bb','b','c','d']
     RecordSync: TypeAlias = Literal['','sync','fs','fsp','fdx','fdxp']
     RecordCombo: TypeAlias = Literal['','fc','fcp','ap','app']
+
+    class Site(SiteMeta):
+        id = 'maimaidxex'
+        Home = "https://maimaidx-eng.com/maimai-mobile"
+        Back = "https://maimai.sega.com/"
+    class Routes(PageRoutes):
+        Home = '/home'
+        PlayerData = '/playerData'
+        RecordData = '/record'
+        Record = {'ReMASTER':'/record/musicGenre/search/?genre=99&diff=4',
+                'MASTER':'/record/musicGenre/search/?genre=99&diff=3',
+                'EXPERT':'/record/musicGenre/search/?genre=99&diff=2',
+                'ADVANCED': '/record/musicGenre/search/?genre=99&diff=1',
+                'BASIC':'/record/musicGenre/search/?genre=99&diff=0'}
+        UserOptions = '/home/userOption'
 
     VERSION_LIST: Final[dict] = {"100": "maimai",
                                  "110": "maimai PLUS",
