@@ -29,6 +29,8 @@ class IOHandler:
         self._queue: Queue[OutputMessage] = Queue()
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
+
+        self.running = True
         atexit.register(self.stop)
 
     def start(self) -> None:
@@ -80,26 +82,27 @@ class IOHandler:
         self._thread = None
 
     def _run(self) -> None:
-        with self.term.fullscreen(), self.term.hidden_cursor():
-            print(self.term.home + self.term.clear)
-            while True:
-                try:
-                    message = self._queue.get(timeout=REFRESH_INTERVAL)
-                except Empty:
-                    if self._stop_event.is_set():
+        while self.running and not self._stop_event.is_set():
+            with self.term.fullscreen(), self.term.hidden_cursor():
+                print(self.term.home + self.term.clear)
+                while True:
+                    try:
+                        message = self._queue.get(timeout=REFRESH_INTERVAL)
+                    except Empty:
+                        if self._stop_event.is_set():
+                            break
+                        continue
+
+                    if message.shutdown:
+                        self._queue.task_done()
                         break
-                    continue
 
-                if message.shutdown:
+                    self._render(message)
                     self._queue.task_done()
-                    break
 
-                self._render(message)
+            while not self._queue.empty():
+                self._queue.get_nowait()
                 self._queue.task_done()
-
-        while not self._queue.empty():
-            self._queue.get_nowait()
-            self._queue.task_done()
 
     def _render(self, message: OutputMessage) -> None:
         if message.clear:
