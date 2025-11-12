@@ -32,7 +32,9 @@ class OtogeDB(MDXDataSource, CachedUtils):
 
 
     @classmethod
-    def __init__(cls,url='https://otoge-db.net/maimai/data/music-ex-intl.json', useFull: bool = False, url_full='https://otoge-db.net/maimai/data/music-ex.json'):
+    def __init__(cls, url='https://otoge-db.net/maimai/data/music-ex-intl.json',
+                 useFull: bool = False,
+                 url_full='https://otoge-db.net/maimai/data/music-ex.json'):
         """
         Initialises class attributes and calls main data init function.
         """
