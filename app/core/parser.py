@@ -1,6 +1,6 @@
 """Provides parser classes as session-class instance wrappers."""
 
-from typing import Literal, Final, Union, get_args
+from typing import Optional, Literal, Final, Union, get_args, cast
 import asyncio
 import bs4
 
@@ -9,15 +9,10 @@ from app.models.record import RecordEntry
 from app.core.games.maimaidx import MaimaiDX
 
 RecordEntryKeys = Literal['type','song','achievement','difficulty','lvl','dx_score','sync', 'combo']
-RecordEntryDict = dict[RecordEntryKeys,Union[str,int,float,None]]
+RecordEntryDict = dict[RecordEntryKeys, Optional[Union[str,int,float]]]
 
-RECORD_URL_MAP: dict[MaimaiDX.ChartDifficulty, str] = {
-    'ReMASTER':'/record/musicGenre/search/?genre=99&diff=4',
-    'MASTER':'/record/musicGenre/search/?genre=99&diff=3',
-    'EXPERT':'/record/musicGenre/search/?genre=99&diff=2',
-    'ADVANCED': '/record/musicGenre/search/?genre=99&diff=1',
-    'BASIC':'/record/musicGenre/search/?genre=99&diff=0'
-}
+RECORD_URL_MAP = cast(dict[MaimaiDX.ChartDifficulty, str],
+                      MaimaiDX.Routes.Record.value)
 
 
 class MDXParser():
@@ -60,9 +55,6 @@ class MDXParser():
                 return html_str
             yield (difficulty, _return_html())
 
-
-
-
     async def parse_records(self, exclude=None):
         """
         Async generator, parses HTML responses
@@ -81,7 +73,7 @@ class MDXParser():
                 record_entry: RecordEntryDict = {'type': None,
                                                  'song': None,
                                                  'difficulty': diff,
-                                                 'lvl':0,
+                                                 'lvl': 0,
                                                  'achievement': 0.0,
                                                  'sync': None,
                                                  'combo': None}
