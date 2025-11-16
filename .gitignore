@@ -1,8 +1,10 @@
 .env
 .venv/
-debug_data
 bin/
 lib/
+
+data
+debug_data
 __pycache__
 .vscode/
 .pytest_cache
