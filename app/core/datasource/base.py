@@ -95,6 +95,10 @@ class MDXDataSource(ABC):
     def get_stats(cls) -> tuple[int,int]:
         return len(cls._data_song), len(cls._data_sheet)
 
+class DataSourceDummy(MDXDataSource):
+    @classmethod
+    def __init__(cls, name: str):
+        cls.__name__ = name
 class CachedUtils:
     @classmethod
     def _clear_cached_method(cls, method: Any) -> None:
