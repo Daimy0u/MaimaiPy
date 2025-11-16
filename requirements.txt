@@ -8,3 +8,6 @@ dotenv
 pytest
 pytest-cov
 pytest-asyncio
+seaborn
+matplotlib
+numpy
