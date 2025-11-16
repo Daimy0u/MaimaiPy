@@ -1,17 +1,29 @@
+import matplotlib.pyplot as plt
+
 import logging
 import os
+import json
 import asyncio
+
+from typing import Optional
 
 from app.core.session import MaimaiEXSession
 from app.core.parser import MDXParser
+from app.core.statistics import StatisticalCollection, scatterplot
 from app.core.datasource import OtogeDB, OtogeDBJPEX, MDXDataSource
-from app.models.record import RecordEntry
+from app.models.record import RecordEntry, RecordCollection
+from app.core.utils.log import configure_logger
 from dotenv import load_dotenv
 
 if not load_dotenv(): raise EnvironmentError("Failed to load .env")
 loop = asyncio.new_event_loop()
 
+logging.basicConfig(filename='test.log', level=logging.DEBUG)
+logger = logging.getLogger("Test")
+logger.info(f'Logger initialised from testing suite.')
+
 async def simple_session_test():
+    configure_logger()
     cookie = os.getenv('COOKIE',None)
     if not cookie:
         raise EnvironmentError("Failed to retrieve COOKIE from .env")
@@ -28,41 +40,59 @@ async def simple_session_test():
 
     mai = MaimaiEXSession(cookie=cookie)
     parse = MDXParser(mai)
-    # await mai.login()
+    await mai.login()
 
-    async for timestamp, record, callback in parse.fetch_recent_record():
-        print(f"{timestamp} | {record.as_print_str()} | callback_url={callback}")
-    #all_records: list[RecordEntry] = []
-    #new_charts: list[RecordEntry] = []
-    #old_charts: list[RecordEntry] = []
-    #async for diff,records in parse.parse_records(exclude=['BASIC','ADVANCED']):
-    #    print(f"Fetched diff={diff}")
-    #    for r in records:
-    #        if not source.get_song(r.song): pass
-    #        is_new = r.is_new()
-    #        all_records.append(r)
-    #        if is_new:
-    #            new_charts.append(r)
-    #        else:
-    #            old_charts.append(r)
-    #        #print(f"({r.chart_type}) {r.difficulty} {r.internal_level} | {r.song} | achv={r.achievement} rating={r.rating} sync={r.sync} combo={r.combo}")
-#
-    #new_charts_sorted = sorted(new_charts, key=lambda x: (-x.rating, -x.internal_level, -x.achievement_float))
-    #old_charts_sorted = sorted(old_charts, key=lambda x: (-x.rating, -x.internal_level, -x.achievement_float))
-#
-    #for top_i, new in enumerate(new_charts_sorted[:15]):
-    #    print(f'#{top_i+1}: {new.difficulty} {new.internal_level} {new.song} - {new.rank} {new.achievement} ({new.rating})')
-    #for top_i, old in enumerate(old_charts_sorted[:35]):
-    #    print(f'#{top_i+1}: {old.difficulty} {old.internal_level} {old.song} - {old.rank} {old.achievement} ({old.rating})')
-#
-    #old_ratings = map(lambda x: x.rating, old_charts_sorted[:35])
-    #old_ratings = sum(old_ratings)
-    #new_ratings = map(lambda x: x.rating, new_charts_sorted[:15])
-    #new_ratings = sum(new_ratings)
+    collection = RecordCollection()
+    async for diff,records in parse.parse_records(exclude=['BASIC','ADVANCED']):
+        print(f"Fetched diff={diff}")
+        for r in records:
+            collection.add(r)
+    with open('collection_dump.txt', 'w+') as f:
+        f.write(str(collection))
+
+    await test_statistics(collection)
+    await test_import(import_string=str(collection), same_comparison=collection)
 
     #log = await mai.logout("/home/userOption","/logout/?")
     # if not log: print("\n\nNOT LOGGED OUT")
     await mai.session.close()
+
+async def test_import(filename: Optional[str] = None,
+                      import_string: Optional[str] = None,
+                      same_comparison: Optional[RecordCollection] = None) -> bool:
+    record_collection = RecordCollection()
+    if filename:
+        with open(filename, 'r') as f:
+            record_collection.from_str(f.read())
+    elif import_string:
+        record_collection.from_str(import_string)
+    else:
+        raise ValueError("Invalid parameters for import test.")
+
+
+    if record_collection.record_map and same_comparison:
+        (i0, i1, i2), diff = same_comparison.compare(record_collection)
+        if (i0, i1, i2) != (0,0,0):
+            logger.debug('IMPORT FAIL: Collection has difference: %s', str([(r.song, d) for r, d in diff]))
+            return False
+        return True
+
+    if record_collection.record_map and not same_comparison:
+        return True
+
+    return False
+
+async def test_statistics(collection: RecordCollection):
+    stat = StatisticalCollection(collection)
+    scatter = scatterplot(stat, 'rating', 'level_internal')
+    if scatter: plt.show()
+
+
+
+
+
+
+
 
 def test_source(source: MDXDataSource):
     songs = source.get_song()
