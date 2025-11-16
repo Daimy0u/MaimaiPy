@@ -2,10 +2,12 @@
 
 from functools import lru_cache
 from math import floor
-from json import dumps as jsonDump
+from json import dumps as json_dump
+from json import loads as json_load
+from logging import Logger
+from typing import Any, Optional, Literal
 
-from typing import Any, Optional, TypeAlias
-
+from app.core.utils.log import Logged
 from app.core.datasource.base import MDXDataSource
 from app.core.games.maimaidx import MaimaiDX
 
@@ -21,7 +23,7 @@ def _cached_calculation(coefficient: float, constant: float) -> float:
 
 ScoreDifference = float
 
-class RecordEntry:
+class RecordEntry(Logged):
     """
     MaimaiDX record entry class
 
@@ -41,25 +43,141 @@ class RecordEntry:
         cls.data_source = source
 
     def __init__(self,
-                 chart_type: MaimaiDX.ChartType,
-                 difficulty: MaimaiDX.ChartDifficulty,
-                 achievement: MaimaiDX.RecordAchievement,
-                 lvl: MaimaiDX.ChartLevel,
-                 song: MaimaiDX.SongName,
-                 sync: MaimaiDX.RecordSync,
-                 combo: MaimaiDX.RecordCombo
+                 song: Optional[MaimaiDX.SongName] = None,
+                 chart_type: Optional[MaimaiDX.ChartType] = None,
+                 difficulty: Optional[MaimaiDX.ChartDifficulty] = None,
+                 achievement: Optional[MaimaiDX.RecordAchievement] = None,
+                 lvl: Optional[MaimaiDX.ChartLevel] = None,
+                 sync: Optional[MaimaiDX.RecordSync] = None,
+                 combo: Optional[MaimaiDX.RecordCombo] = None,
+                 import_str: Optional[str] = None,
+                 import_dict: Optional[dict] = None
                  ):
         """Initialises internal class variables."""
-        self._type: MaimaiDX.ChartType = chart_type
-        self._diff: MaimaiDX.ChartDifficulty = difficulty
-        self._achv: MaimaiDX.RecordAchievement = achievement
-        self._lvl: MaimaiDX.ChartLevel = lvl
-        self._song: MaimaiDX.SongName = song
-        self._sync: MaimaiDX.RecordSync= sync
-        self._combo: MaimaiDX.RecordCombo = combo
-
-        # external datasource status
         self._fetched = False
+        if import_str:
+            if self.from_str(import_str):
+                 return
+            else:
+                del self
+                return
+        if import_dict:
+            if self.from_dict(import_dict):
+                return
+            else:
+                del self
+                return
+
+        if song and chart_type and difficulty and achievement:
+            self._song: MaimaiDX.SongName = song
+            self._type: MaimaiDX.ChartType = chart_type
+            self._diff: MaimaiDX.ChartDifficulty = difficulty
+            self._achv: MaimaiDX.RecordAchievement = achievement
+        else:
+            missing = [p for p in [song, chart_type, difficulty, achievement] if p is None]
+            self._log('ERROR', "Missing needed parameters for instantiation: %s", str(missing))
+            del self
+            return
+
+        if lvl:
+            self._lvl: MaimaiDX.ChartLevel = lvl
+        else:
+            d_source: Optional[MDXDataSource] = getattr(self.__class__,
+                                                        'data_source',
+                                                        getattr(self, 'data_source', None))
+            if d_source:
+                constant = d_source.get_constant(self._song, self._type, self._diff)
+                lvl = self.lvl_from_constant(constant)
+                self._lvl = lvl if lvl else 'N/A'
+
+        self._sync: MaimaiDX.RecordSync= sync if sync else ''
+        self._combo: MaimaiDX.RecordCombo = combo if combo else ''
+
+    def lvl_from_constant(self, constant: float) -> Optional[str]:
+        lvl = str(constant).split('.')
+        if not lvl:
+            return None
+        if len(lvl) == 2:
+            if int(lvl[1]) >= 6:
+                lvl[1] = '+'
+            else:
+                lvl[1] = ''
+
+        return ''.join(lvl)
+
+    def from_dict(self, import_dict: dict) -> bool:
+
+        def invalid_format(key_s: str) -> bool:
+            self._log('ERROR', "Invalid format for key(s) [%s]: %s", key_s, import_dict)
+            return False
+
+        key = import_dict.get('key', None)
+        if isinstance(key, list) and len(key) == 3:
+            self._song = key[0]
+            self._type = key[1]
+            self._diff = key[2]
+        else:
+            return invalid_format('key')
+        record = import_dict.get('record', None)
+        if isinstance(record, list) and len(record) == 4:
+            if isinstance(record[0], float):
+                self._achv = str(record[0]) + '%'
+            else:
+                self._achv = record[0]
+            self._combo = record[2]
+            self._sync = record[3]
+        else:
+            return invalid_format('record')
+        sourced = import_dict.get('sourced', False)
+        meta = import_dict.get('meta', [0.0, 'N/A', "None"])
+        d_source: Optional[MDXDataSource] = getattr(self.__class__,
+                                                    'data_source',
+                                                    getattr(self, 'data_source', None))
+
+        if sourced and not d_source:
+            if len(meta) != 3:
+                return invalid_format('meta')
+            if meta[0] != 0.0:
+                self._lvl_i = meta[0]
+            self.lvl = meta[1]
+            rating = import_dict.get('rating', 0)
+            if rating > 0:
+                self._rating = rating
+        elif d_source:
+            self._lvl_i = lvl = d_source.get_constant(self._song,self._type,self._diff)
+            lvl = str(lvl).split('.')
+            if not lvl:
+                return invalid_format('song, type, diff')
+            if len(lvl) == 2:
+                if int(lvl[1]) >= 6:
+                    lvl[1] = '+'
+                else:
+                    lvl[1] = ''
+            self._lvl = ''.join(lvl)
+        return True
+
+    def from_str(self, import_str: str) -> bool:
+        #logging helper
+        import_dict = {}
+
+        try:
+            import_dict = json_load(import_str)
+            if isinstance(import_dict, list):
+                self._log('ERROR', "Tried importing multiple records, try RecordContainer.from_str() instead!")
+                return False
+        except Exception as e:
+            self._log('ERROR', 'Invalid import string format (%s) exception: %s', import_str, str(e))
+            return False
+
+        if import_dict:
+            return self.from_dict(import_dict)
+
+        self._log('ERROR', 'Invalid import string format: %s', import_str)
+        return False
+
+
+
+
 
     def resolve_inputs(self):
         if not self._type or not self._diff or not self._song:
@@ -116,7 +234,7 @@ class RecordEntry:
         if RecordEntry.data_source:
             res = RecordEntry.data_source.get_constant(song_name=song_name,chart_type=self._type,difficulty=self._diff)
         else:
-            res = 0.0
+            res = getattr(self, '_lvl_i', 0.0)
         if isinstance(res, float):
             if res > 0.0:
                 self._fetched = True
@@ -168,7 +286,7 @@ class RecordEntry:
         return result_rank
 
     def is_new(self) -> bool:
-        if not RecordEntry.data_source:
+        if not getattr(self.__class__, 'data_source', getattr(self, 'data_source', None)):
             return False
 
         version = RecordEntry.data_source.get_song_version(song_name=self._song)
@@ -212,11 +330,12 @@ class RecordEntry:
                 self.difficulty],
 
                 "meta": [self.internal_level,
+                         self._lvl,
                          self.data_source.__name__ if self._fetched else None],
 
                 "sourced": self.valid,
 
-                "record": [round(self.achievement_float, 4),
+                "record": [self.achievement,
                            self.rank,
                            self.combo,
                            self.sync],
@@ -225,14 +344,16 @@ class RecordEntry:
                 }
     #String Helpers
     def __repr__(self) -> str:
-        return jsonDump(self.as_dict(), ensure_ascii=False)
+        return json_dump(self.as_dict(), ensure_ascii=False)
 
 
-class RecordContainer:
+class RecordCollection(Logged):
     """Handle record entry at one time point."""
     entries: list[RecordEntry] = []
 
-    def __init__(self, entries: Optional[list[RecordEntry]] = None):
+    def __init__(self,
+                 entries: Optional[list[RecordEntry]] = None,
+                 import_str: Optional[str] = None):
 
         if not entries:
             entries = []
@@ -241,14 +362,11 @@ class RecordContainer:
         self.unique = set([(e.song, e.chart_type, e.difficulty, e.achievement) for e in self.entries])
         self.record_map: dict = {(e.song, e.chart_type, e.difficulty): e for e in self.entries}
 
-    def __str__(self) -> str:
-        if not self.entries:
-            return '[]'
+        if import_str: self.from_str(import_str)
 
-        records_str = [str(e)+',' for e in self.entries]
-        if records_str[-1] == ',':
-            records_str = records_str[:-1]
-        return '[' + ''.join(records_str) + ']'
+
+    def __str__(self) -> str:
+        return json_dump([entry.as_dict() for entry in self.entries], ensure_ascii=False)
 
     def _tuple_set(self, record: RecordEntry):
         return (record.song, record.chart_type, record.difficulty, record.achievement)
@@ -278,11 +396,13 @@ class RecordContainer:
                 self.record_map[self._tuple_map(record)] = record
 
                 self.unique.add(self._tuple_set(record))
+            return
 
         self.record_map[self._tuple_map(record)] = record
         self.unique.add((record.song, record.chart_type, record.difficulty, record.achievement))
+        self.entries.append(record)
 
-    def compare(self, older: 'RecordContainer'):
+    def compare(self, older: 'RecordCollection'):
         newscores, upscores, downscores = (0, 0, 0)
         result: list[tuple[RecordEntry, ScoreDifference]] = []
 
@@ -295,7 +415,7 @@ class RecordContainer:
             #thus there's going to be alot of"oh deleted score!"
             #but if they did delete the sheet, need a datasource logic to verify.
             if d_tuple in self.unique:
-                if d_tuple not in self.record_map:
+                if d_query not in self.record_map:
                     raise ValueError("Unique set and record map mismatch!")
 
                 this_record: RecordEntry = self.record_map[d_query]
@@ -320,6 +440,22 @@ class RecordContainer:
 
         return (upscores, downscores, newscores), result
 
+    def from_list(self, import_list: list[dict]):
+        for record_dict in import_list:
+            record = RecordEntry(import_dict=record_dict)
+            if record:
+                self.add(record)
+            else:
+                self._log('ERROR', "Error importing entry: %s", str(record))
+
+    def from_str(self, import_str: str):
+        try:
+            import_lst = json_load(import_str)
+            if not import_lst: raise ValueError(f"Failed to load JSON from string: {import_str}")
+            self.from_list(import_lst)
+        except Exception as e:
+            self._log('ERROR', 'Invalid import string format (%s) exception: %s', import_str, str(e))
+
     def get_top_50(self):
         new: list[RecordEntry] = []
         old: list[RecordEntry] = []
@@ -329,13 +465,13 @@ class RecordContainer:
             else:
                 old.append(e)
 
+        new = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
+        old = sorted(old, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
+        
         if len(new) > 15:
             new = new[:15]
         if len(old) > 35:
             old = old[:35]
-
-        new = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
-        old = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
 
         new_rating = sum(e.rating for e in new)
         old_rating = sum(e.rating for e in old)

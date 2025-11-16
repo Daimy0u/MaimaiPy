@@ -237,13 +237,13 @@ class MDXParser():
                 if not record_entry['type'] or not record_entry['difficulty'] or not record_entry['song']:
                     continue
 
-                record = RecordEntry(record_entry['type'],
-                                     record_entry['difficulty'],
-                                     record_entry['achievement'],
-                                     record_entry['lvl'],
-                                     record_entry['song'],
-                                     record_entry['sync'],
-                                     record_entry['combo'])
+                record = RecordEntry(song=record_entry['song'],
+                                     chart_type=record_entry['type'],
+                                     difficulty=record_entry['difficulty'],
+                                     achievement=record_entry['achievement'],
+                                     lvl=record_entry['lvl'],
+                                     sync=record_entry['sync'],
+                                     combo=record_entry['combo'])
 
                 yield (timestamp, record, callback_url)
 
