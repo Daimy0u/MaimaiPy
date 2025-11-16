@@ -20,15 +20,6 @@ __all__ = ["MaimaiSession"]
 Params = dict[str,str]
 PageParams = dict[str,Params]
 
-class PageRouteMeta(EnumMeta):
-    def __getitem__(self, name):
-        try:
-            return super().__getitem__(name)
-        except (TypeError, KeyError) as error:
-            raise error
-    def __iter__(self):
-        return super().__iter__()
-
 AUTH_CONDITIONS: Final[dict] = {
                                     "maimaidxex": {
                                         False: set(['Login|maimai DX NET','maimai DX NET－Error－'])
@@ -150,9 +141,9 @@ class ALLNETSessionWithCookie():
             raise TypeError("invalid route parameter: must be an instance of str or PageRoutes")
 
         url = f"{self.url_params['redirect_url']}{path}"
-
-        params = {"ssid": getattr(self, "ssid", None)} if getattr(self, "ssid", None) else None
-
+        ssid = getattr(self, "ssid", None)
+        params = {"ssid": ssid} if ssid else None
+        
         async with self.session.get(url, params=params, **kwargs) as response:
             return await response.text()
 
