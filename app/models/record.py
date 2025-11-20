@@ -553,7 +553,7 @@ class RecordCollection(Logged):
 
         new = sorted(new, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
         old = sorted(old, key=lambda x: (-x.rating, -x.achievement_float, -x.internal_level))
-        
+
         if len(new) > 15:
             new = new[:15]
         if len(old) > 35:
