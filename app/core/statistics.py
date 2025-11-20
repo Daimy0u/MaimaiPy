@@ -10,8 +10,9 @@ from app.models.statistical import RecordCollection, StatisticalCollection, Entr
 __all__ = ['scatterplot']
 
 DEFAULT_PLOT_DIRECTORY = 'data/charts/'
-LVL_LABEL_ORDER = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '9+', '10', '10+', 
+LVL_LABEL_ORDER = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '9+', '10', '10+',
                '11', '11+', '12', '12+', '13', '13+', '14', '14+', '15']
+
 def save_png(figure: Figure, directory: str = DEFAULT_PLOT_DIRECTORY, name: str = 'default'):
     figure.savefig(f'{directory}{name}.png')
 
@@ -32,8 +33,8 @@ def rating_boxplot(collection: StatisticalCollection, rating_threshold: int = 20
     ax.legend()
     save_png(fig, name='hist')
 
-def rating_histogram(collection: StatisticalCollection, 
-                     lower_bound: int = 250, 
+def rating_histogram(collection: StatisticalCollection,
+                     lower_bound: int = 250,
                      upper_bound: int = 350,
                      by_level_str: Optional[str] = None):
     df = collection.as_dataframe()
@@ -42,9 +43,9 @@ def rating_histogram(collection: StatisticalCollection,
         range_df = range_df[range_df['level_label'] == by_level_str]
     fig = sns.displot(range_df, x='rating').figure
     save_png(fig, name='hist_rating')
-    
-def rating_histogram_clt(collection: StatisticalCollection, 
-                         lower_bound: int = 250, 
+
+def rating_histogram_clt(collection: StatisticalCollection,
+                         lower_bound: int = 250,
                          upper_bound: int = 350,
                          by_level_strs: list = ['12+','13', '13+', '14', '14+'],
                          constant_lower_bound: Optional[float] = None):
@@ -80,8 +81,8 @@ def rating_histogram_clt(collection: StatisticalCollection,
     ax.legend()
     plt.tight_layout()
     save_png(fig, name='hist_rating_clt_levels')
-    
-    
+
+
 def ratio_s_ss(collection: StatisticalCollection):
     fig, ax = plt.subplots()
     df = collection.as_dataframe()
@@ -93,7 +94,7 @@ def ratio_s_ss(collection: StatisticalCollection):
     sns.barplot(counts, x='level_label', y='ratio')
     ax.legend()
     save_png(fig, name='ratio')
-    
+
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
@@ -113,5 +114,3 @@ if __name__ == '__main__':
         ratio_s_ss(stat)
         df_t50 = stat.as_dataframe(only_top_50=True)
         df = stat.as_dataframe()
-    
-    

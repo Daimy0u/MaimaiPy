@@ -25,7 +25,7 @@ EntryColumn = Literal[
     "song_name",
 ]
 
-label_order = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '9+', '10', '10+', 
+label_order = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '9+', '10', '10+',
                '11', '11+', '12', '12+', '13', '13+', '14', '14+', '15']
 class StatisticalCollection(RecordCollection):
     def __init__(self, record_collection: Optional[RecordCollection] = None):
@@ -56,7 +56,7 @@ class StatisticalCollection(RecordCollection):
         df = pd.DataFrame(dataclass_array)
         df['level_label'] = pd.Categorical(df['level_label'], categories=label_order, ordered=True)
         return df
-        
+
 
 
 
