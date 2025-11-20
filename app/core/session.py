@@ -16,7 +16,7 @@ from bs4.element import NavigableString
 from app.core.games.maimaidx import MaimaiDX, GameMetadata, SiteMeta, PageRoutes
 
 
-__all__ = ["MaimaiSession"]
+__all__ = ["ALLNETSessionWithCookie", "MaimaiEXSession", "MaimaiSession"]
 Params = dict[str,str]
 PageParams = dict[str,Params]
 
