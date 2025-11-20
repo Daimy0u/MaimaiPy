@@ -1,8 +1,9 @@
 """Provides parser classes as session-class instance wrappers."""
+import bs4
 
+import re
 from typing import Optional, Literal, Final, Union, get_args, cast
 import asyncio
-import bs4
 
 from app.core.session import MaimaiEXSession
 from app.models.record import RecordEntry
@@ -136,14 +137,18 @@ class MDXParser():
 
             yield diff,res
 
-    async def fetch_recent_record(self):
-        #if not self.session.auth_status:
-        #    await self.session.login()
+    async def fetch_recent_record(self, **kwargs):
+        recent = None
+        if 'debug' in kwargs and 'debug_fp_recent_html'in kwargs:
+            if kwargs['debug']:
+                with open(kwargs['debug_fp_recent_html'], 'r+') as f:
+                    recent = f.read()
+            else:
+                if not self.session.auth_status:
+                    await self.session.login()
+                recent = self.session.get_html(route=MaimaiDX.Routes.RecordData)
 
-        #recent = self.session.get_html(route=MaimaiDX.Routes.RecordData)
-        with open('debug_data/recent.html', 'r+') as f:
-            recent = f.read()
-        if not recent: raise TypeError()
+        if not isinstance(recent, str): raise TypeError()
         #recent = await recent
         soup = bs4.BeautifulSoup(recent, "html.parser")
 
@@ -246,6 +251,30 @@ class MDXParser():
                                      combo=record_entry['combo'])
 
                 yield (timestamp, record, callback_url)
+
+    #typing for fetch_user
+    Username = Optional[str]
+    Rating = Optional[int]
+    Title = Optional[str]
+
+    async def fetch_user(self) -> tuple[Username, Rating, Title]:
+        user_html = await self.session.get_html(route=MaimaiDX.Routes.Home)
+
+        if user_html:
+            soup = bs4.BeautifulSoup(user_html, "html.parser")
+
+            username = soup.find("div", attrs={"class": "name_block f_l f_16"})
+            username = username.text if username else None
+
+            rating = soup.find("div", attrs={"class": "rating_block"})
+            rating = int(rating.text) if rating else None
+
+            title = soup.find("div", attrs={"class": "trophy_inner_block f_13"})
+            title = title.text.replace("\n", "") if title else None
+
+            return username, rating, title
+
+        return None, None, None
 
 
 
