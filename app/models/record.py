@@ -179,6 +179,92 @@ class RecordEntry(Logged):
 
 
 
+    def lvl_from_constant(self, constant: float) -> Optional[str]:
+        lvl = str(constant).split('.')
+        if not lvl:
+            return None
+        if len(lvl) == 2:
+            if int(lvl[1]) >= 6:
+                lvl[1] = '+'
+            else:
+                lvl[1] = ''
+
+        return ''.join(lvl)
+
+    def from_dict(self, import_dict: dict) -> bool:
+
+        def invalid_format(key_s: str) -> bool:
+            self._log('ERROR', "Invalid format for key(s) [%s]: %s", key_s, import_dict)
+            return False
+
+        key = import_dict.get('key', None)
+        if isinstance(key, list) and len(key) == 3:
+            self._song = key[0]
+            self._type = key[1]
+            self._diff = key[2]
+        else:
+            return invalid_format('key')
+        record = import_dict.get('record', None)
+        if isinstance(record, list) and len(record) == 4:
+            if isinstance(record[0], float):
+                self._achv = str(record[0]) + '%'
+            else:
+                self._achv = record[0]
+            self._combo = record[2]
+            self._sync = record[3]
+        else:
+            return invalid_format('record')
+        sourced = import_dict.get('sourced', False)
+        meta = import_dict.get('meta', [0.0, 'N/A', "None"])
+        d_source: Optional[MDXDataSource] = getattr(self.__class__,
+                                                    'data_source',
+                                                    getattr(self, 'data_source', None))
+
+        if sourced and not d_source:
+            if len(meta) != 3:
+                return invalid_format('meta')
+            if meta[0] != 0.0:
+                self._lvl_i = meta[0]
+            self.lvl = meta[1]
+            rating = import_dict.get('rating', 0)
+            if rating > 0:
+                self._rating = rating
+        elif d_source:
+            self._lvl_i = lvl = d_source.get_constant(self._song,self._type,self._diff)
+            lvl = str(lvl).split('.')
+            if not lvl:
+                return invalid_format('song, type, diff')
+            if len(lvl) == 2:
+                if int(lvl[1]) >= 6:
+                    lvl[1] = '+'
+                else:
+                    lvl[1] = ''
+            self._lvl = ''.join(lvl)
+        return True
+
+    def from_str(self, import_str: str) -> bool:
+        #logging helper
+        import_dict = {}
+
+        try:
+            import_dict = json_load(import_str)
+            if isinstance(import_dict, list):
+                self._log('ERROR', "Tried importing multiple records, try RecordContainer.from_str() instead!")
+                return False
+        except Exception as e:
+            self._log('ERROR', 'Invalid import string format (%s) exception: %s', import_str, str(e))
+            return False
+
+        if import_dict:
+            return self.from_dict(import_dict)
+
+        self._log('ERROR', 'Invalid import string format: %s', import_str)
+        return False
+
+
+
+
+
     def resolve_inputs(self):
         if not self._type or not self._diff or not self._song:
             raise ValueError("Missing key parameters for record!")
